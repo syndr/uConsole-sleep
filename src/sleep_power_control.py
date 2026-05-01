@@ -1,4 +1,5 @@
 import os
+import time
 import inotify.adapters
 import inotify.constants
 
@@ -9,6 +10,34 @@ from find_internal_kb import find_internal_kb
 SAVING_CPU_FREQ = os.environ.get("SAVING_CPU_FREQ")
 DISABLE_POWER_OFF_KB = os.environ.get("DISABLE_POWER_OFF_KB") == "yes"
 DISABLE_CPU_MIN_FREQ = os.environ.get("DISABLE_CPU_MIN_FREQ") == "yes"
+POLL_AC_INTERVAL_SEC = int(os.environ.get("POLL_AC_INTERVAL_SEC") or 30)
+
+AC_ONLINE_PATH = "/sys/class/power_supply/axp22x-ac/online"
+
+
+def is_ac_plugged():
+    try:
+        with open(AC_ONLINE_PATH, "r") as f:
+            return f.read().strip() == "1"
+    except Exception:
+        return False
+
+
+def apply_offscreen_cpu_freq():
+    if DISABLE_CPU_MIN_FREQ:
+        return
+    if is_ac_plugged():
+        with open(os.path.join(cpu_policy_path, "scaling_max_freq"), "w") as f:
+            f.write(default_cpu_freq_max)
+        with open(os.path.join(cpu_policy_path, "scaling_min_freq"), "w") as f:
+            f.write(default_cpu_freq_min)
+        print(f"cpu freq: unclamped (ac plugged, max={default_cpu_freq_max})")
+    else:
+        with open(os.path.join(cpu_policy_path, "scaling_min_freq"), "w") as f:
+            f.write(saving_cpu_freq_min)
+        with open(os.path.join(cpu_policy_path, "scaling_max_freq"), "w") as f:
+            f.write(saving_cpu_freq_max)
+        print(f"cpu freq: clamped (max={saving_cpu_freq_max})")
 
 
 def control_by_state(state):
@@ -42,13 +71,7 @@ def control_by_state(state):
             with open(os.path.join(usb_driver_path, "unbind"), "w") as f:
                 f.write(kb_device_id)
             print("kb power state: unbind")
-        if not DISABLE_CPU_MIN_FREQ:
-            with open(os.path.join(cpu_policy_path, "scaling_min_freq"), "w") as f:
-                f.write(saving_cpu_freq_min)
-            print(f"cpu freq min: {saving_cpu_freq_min}")
-            with open(os.path.join(cpu_policy_path, "scaling_max_freq"), "w") as f:
-                f.write(saving_cpu_freq_max)
-            print(f"cpu freq max: {saving_cpu_freq_max}")
+        apply_offscreen_cpu_freq()
 
 
 backlight_path = find_backlight()
@@ -110,18 +133,32 @@ i.add_watch(backlight_bl_path, mask=inotify.constants.IN_MODIFY)
 print(f"Monitoring {backlight_bl_path} for changes...")
 
 last_screen_state = ""
+last_ac_plugged = None
+last_ac_check = 0.0
 while True:
     try:
         list(i.event_gen(yield_nones=False, timeout_s=1))
 
         with open(backlight_bl_path, "r") as f:
             screen_state = f.read().strip()
+        screen_off = screen_state == "4"
 
-        if screen_state == last_screen_state:
+        if screen_state != last_screen_state:
+            last_screen_state = screen_state
+            control_by_state(not screen_off)
+            last_ac_plugged = is_ac_plugged() if screen_off else None
+            last_ac_check = time.time()
             continue
-        last_screen_state = screen_state
 
-        control_by_state(screen_state != "4")
+        if screen_off:
+            now = time.time()
+            if now - last_ac_check >= POLL_AC_INTERVAL_SEC:
+                last_ac_check = now
+                ac = is_ac_plugged()
+                if ac != last_ac_plugged:
+                    print(f"AC state changed while screen off: {last_ac_plugged} -> {ac}")
+                    last_ac_plugged = ac
+                    apply_offscreen_cpu_freq()
 
     except Exception as e:
         print(f"Error occurred: {e}")

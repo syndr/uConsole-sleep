@@ -23,3 +23,9 @@
 ### DISABLE_CPU_MIN_FREQ --- [yes/no] --- Disable set cpu freq max to min
 # default no
 #DISABLE_CPU_MIN_FREQ=yes
+
+### POLL_AC_INTERVAL_SEC --- [1~] --- AC poll interval (seconds) while screen is off
+###  - When AC plugged, cpu freq clamp is skipped. This poll picks up plug/unplug
+###    while the screen is off so behavior catches up without waking the screen.
+# default 30
+#POLL_AC_INTERVAL_SEC=60
