@@ -1,3 +1,8 @@
+Ver1.5
+  - sleep-power-control: skip CPU freq clamp when on AC, with 30s AC poll while screen is off
+  - new sleep-cpu-governor service: drops to `powersave` below 20% battery, restores `schedutil` at >=25% (with hysteresis)
+  - add Makefile wrapping build/install/clean/status/logs targets
+
 Ver1.4
   - drop usage of `pyinstaller` (services are now shell wrappers, not compiled binaries)
   - replace inotify simple with inotify
