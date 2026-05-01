@@ -1,0 +1,15 @@
+[Unit]
+Description=Sleep CPU Governor Control Based on Battery State
+After=basic.target
+
+[Service]
+EnvironmentFile=/etc/uconsole-sleep/config
+ExecStart=/usr/local/bin/sleep_cpu_governor
+Restart=always
+User=root
+Group=root
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=basic.target

@@ -15,6 +15,7 @@ cp "$SCRIPT_DIR/src/find_power_key.py"        uconsole-sleep/usr/local/lib/ucons
 cp "$SCRIPT_DIR/src/sleep_display_control.py" uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_display_control.py
 cp "$SCRIPT_DIR/src/sleep_power_control.py"   uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_power_control.py
 cp "$SCRIPT_DIR/src/sleep_remap_powerkey.py"  uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_remap_powerkey.py
+cp "$SCRIPT_DIR/src/sleep_cpu_governor.py"    uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_cpu_governor.py
 
 cat << 'EOF' > uconsole-sleep/usr/local/bin/sleep_power_control
 #!/bin/bash
@@ -28,10 +29,17 @@ cd /usr/local/lib/uconsole-sleep
 exec python3 -u sleep_remap_powerkey.py "$@"
 EOF
 
+cat << 'EOF' > uconsole-sleep/usr/local/bin/sleep_cpu_governor
+#!/bin/bash
+cd /usr/local/lib/uconsole-sleep
+exec python3 -u sleep_cpu_governor.py "$@"
+EOF
+
 cp "$SCRIPT_DIR/config.default" uconsole-sleep/etc/uconsole-sleep/config.default
 
 cp "$SCRIPT_DIR/services/sleep-power-control.service"  uconsole-sleep/etc/systemd/system/sleep-power-control.service
 cp "$SCRIPT_DIR/services/sleep-remap-powerkey.service" uconsole-sleep/etc/systemd/system/sleep-remap-powerkey.service
+cp "$SCRIPT_DIR/services/sleep-cpu-governor.service"   uconsole-sleep/etc/systemd/system/sleep-cpu-governor.service
 
 cat << 'EOF' > uconsole-sleep/DEBIAN/control
 Package: uconsole-sleep
@@ -55,9 +63,11 @@ systemctl daemon-reload
 
 systemctl enable sleep-power-control.service
 systemctl enable sleep-remap-powerkey.service
+systemctl enable sleep-cpu-governor.service
 
 systemctl start sleep-power-control.service
 systemctl start sleep-remap-powerkey.service
+systemctl start sleep-cpu-governor.service
 EOF
 
 cat << 'EOF' > uconsole-sleep/DEBIAN/prerm
@@ -65,9 +75,11 @@ cat << 'EOF' > uconsole-sleep/DEBIAN/prerm
 
 systemctl stop sleep-power-control.service
 systemctl stop sleep-remap-powerkey.service
+systemctl stop sleep-cpu-governor.service
 
 systemctl disable sleep-power-control.service
 systemctl disable sleep-remap-powerkey.service
+systemctl disable sleep-cpu-governor.service
 EOF
 
 cat << 'EOF' > uconsole-sleep/DEBIAN/postrm

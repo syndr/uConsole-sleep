@@ -29,3 +29,23 @@
 ###    while the screen is off so behavior catches up without waking the screen.
 # default 30
 #POLL_AC_INTERVAL_SEC=60
+
+### CPU_GOVERNOR_NORMAL --- governor name --- Used on AC or above hysteresis
+# default schedutil
+#CPU_GOVERNOR_NORMAL=ondemand
+
+### CPU_GOVERNOR_LOW_BATTERY --- governor name --- Used below low-battery threshold
+# default powersave
+#CPU_GOVERNOR_LOW_BATTERY=conservative
+
+### CPU_LOW_BATTERY_ENTER_PCT --- [0-100] --- Drop to low-battery governor below this %
+# default 20
+#CPU_LOW_BATTERY_ENTER_PCT=15
+
+### CPU_LOW_BATTERY_EXIT_PCT --- [0-100] --- Restore normal governor at or above this %
+# default 25 (must be >= ENTER to provide hysteresis)
+#CPU_LOW_BATTERY_EXIT_PCT=30
+
+### CPU_GOVERNOR_POLL_SEC --- [1~] --- Battery/AC poll interval in seconds
+# default 30
+#CPU_GOVERNOR_POLL_SEC=60
