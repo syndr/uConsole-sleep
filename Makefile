@@ -1,8 +1,14 @@
 VERSION ?= 1.6
+WITH_IDLE_ALERTER ?= 1
 DEB := uconsole-sleep.deb
-APT_DEPS := python3-inotify python3-uinput python3-xlib swayidle sound-theme-freedesktop
+APT_DEPS := python3-inotify python3-uinput
 SERVICES := sleep-power-control sleep-remap-powerkey sleep-cpu-governor
-USER_SERVICES := sleep-idle-alert
+USER_SERVICES :=
+
+ifeq ($(WITH_IDLE_ALERTER),1)
+APT_DEPS += python3-xlib swayidle sound-theme-freedesktop
+USER_SERVICES += sleep-idle-alert
+endif
 
 SOURCES := $(wildcard src/*.py services/*.service services/user/*.service udev/*.rules) config.default make_uconsole-sleep_package.sh
 
@@ -13,7 +19,7 @@ all: $(DEB)
 build: $(DEB)
 
 $(DEB): $(SOURCES)
-	ENV_VERSION=$(VERSION) ./make_uconsole-sleep_package.sh
+	ENV_VERSION=$(VERSION) WITH_IDLE_ALERTER=$(WITH_IDLE_ALERTER) ./make_uconsole-sleep_package.sh
 
 deps:
 	sudo apt install -y $(APT_DEPS)
@@ -37,9 +43,11 @@ logs:
 	sudo journalctl -f $(addprefix -u ,$(SERVICES))
 
 user-status:
+	@if [ -z "$(USER_SERVICES)" ]; then echo "no user services in this build (WITH_IDLE_ALERTER=$(WITH_IDLE_ALERTER))"; exit 0; fi
 	systemctl --user status --no-pager $(USER_SERVICES)
 
 user-logs:
+	@if [ -z "$(USER_SERVICES)" ]; then echo "no user services in this build (WITH_IDLE_ALERTER=$(WITH_IDLE_ALERTER))"; exit 0; fi
 	journalctl --user -f $(addprefix -u ,$(USER_SERVICES))
 
 help:
@@ -56,3 +64,4 @@ help:
 	@echo "  user-logs    journalctl --user -f for user services"
 	@echo ""
 	@echo "Override version: make VERSION=1.7 build"
+	@echo "Skip the idle alerter: make WITH_IDLE_ALERTER=0 build"

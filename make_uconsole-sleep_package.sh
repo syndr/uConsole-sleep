@@ -1,13 +1,17 @@
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WITH_IDLE_ALERTER="${WITH_IDLE_ALERTER:-1}"
 
 mkdir -p uconsole-sleep/DEBIAN
 mkdir -p uconsole-sleep/usr/local/bin
 mkdir -p uconsole-sleep/usr/local/lib/uconsole-sleep
-mkdir -p uconsole-sleep/usr/local/lib/systemd/user
 mkdir -p uconsole-sleep/etc/uconsole-sleep
 mkdir -p uconsole-sleep/etc/systemd/system
-mkdir -p uconsole-sleep/lib/udev/rules.d
+
+if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
+    mkdir -p uconsole-sleep/usr/local/lib/systemd/user
+    mkdir -p uconsole-sleep/lib/udev/rules.d
+fi
 
 cp "$SCRIPT_DIR/src/find_backlight.py"        uconsole-sleep/usr/local/lib/uconsole-sleep/find_backlight.py
 cp "$SCRIPT_DIR/src/find_drm_panel.py"        uconsole-sleep/usr/local/lib/uconsole-sleep/find_drm_panel.py
@@ -18,7 +22,10 @@ cp "$SCRIPT_DIR/src/sleep_display_control.py" uconsole-sleep/usr/local/lib/ucons
 cp "$SCRIPT_DIR/src/sleep_power_control.py"   uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_power_control.py
 cp "$SCRIPT_DIR/src/sleep_remap_powerkey.py"  uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_remap_powerkey.py
 cp "$SCRIPT_DIR/src/sleep_cpu_governor.py"    uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_cpu_governor.py
-cp "$SCRIPT_DIR/src/sleep_idle_alert.py"      uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_idle_alert.py
+
+if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
+    cp "$SCRIPT_DIR/src/sleep_idle_alert.py"  uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_idle_alert.py
+fi
 
 cat << 'EOF' > uconsole-sleep/usr/local/bin/sleep_power_control
 #!/bin/bash
@@ -38,11 +45,13 @@ cd /usr/local/lib/uconsole-sleep
 exec python3 -u sleep_cpu_governor.py "$@"
 EOF
 
-cat << 'EOF' > uconsole-sleep/usr/local/bin/sleep_idle_alert
+if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
+    cat << 'EOF' > uconsole-sleep/usr/local/bin/sleep_idle_alert
 #!/bin/bash
 cd /usr/local/lib/uconsole-sleep
 exec python3 -u sleep_idle_alert.py "$@"
 EOF
+fi
 
 cp "$SCRIPT_DIR/config.default" uconsole-sleep/etc/uconsole-sleep/config.default
 
@@ -50,17 +59,24 @@ cp "$SCRIPT_DIR/services/sleep-power-control.service"  uconsole-sleep/etc/system
 cp "$SCRIPT_DIR/services/sleep-remap-powerkey.service" uconsole-sleep/etc/systemd/system/sleep-remap-powerkey.service
 cp "$SCRIPT_DIR/services/sleep-cpu-governor.service"   uconsole-sleep/etc/systemd/system/sleep-cpu-governor.service
 
-cp "$SCRIPT_DIR/services/user/sleep-idle-alert.service" uconsole-sleep/usr/local/lib/systemd/user/sleep-idle-alert.service
+if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
+    cp "$SCRIPT_DIR/services/user/sleep-idle-alert.service" uconsole-sleep/usr/local/lib/systemd/user/sleep-idle-alert.service
+    cp "$SCRIPT_DIR/udev/99-uconsole-sleep-backlight.rules" uconsole-sleep/lib/udev/rules.d/99-uconsole-sleep-backlight.rules
+fi
 
-cp "$SCRIPT_DIR/udev/99-uconsole-sleep-backlight.rules" uconsole-sleep/lib/udev/rules.d/99-uconsole-sleep-backlight.rules
+if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
+    DEPS_LINE="python3, python3-inotify, python3-uinput, python3-xlib, swayidle, sound-theme-freedesktop"
+else
+    DEPS_LINE="python3, python3-inotify, python3-uinput"
+fi
 
-cat << 'EOF' > uconsole-sleep/DEBIAN/control
+cat << EOF > uconsole-sleep/DEBIAN/control
 Package: uconsole-sleep
 Version: ENV_VERSION
 Maintainer: paragonnov (github.com/qkdxorjs1002)
 Original-Maintainer: paragonnov (github.com/qkdxorjs1002)
 Architecture: all
-Depends: python3, python3-inotify, python3-uinput, python3-xlib, swayidle, sound-theme-freedesktop
+Depends: ${DEPS_LINE}
 Description: uConsole Sleep control scripts.
  Source-Site: https://github.com/qkdxorjs1002/uConsole-sleep
 EOF
@@ -81,6 +97,10 @@ systemctl enable sleep-cpu-governor.service
 systemctl start sleep-power-control.service
 systemctl start sleep-remap-powerkey.service
 systemctl start sleep-cpu-governor.service
+EOF
+
+if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
+    cat << 'EOF' >> uconsole-sleep/DEBIAN/postinst
 
 udevadm control --reload-rules || true
 udevadm trigger --subsystem-match=backlight || true
@@ -88,6 +108,7 @@ udevadm trigger --subsystem-match=backlight || true
 echo "uconsole-sleep: enable the per-user idle alerter with:"
 echo "    systemctl --user daemon-reload && systemctl --user enable --now sleep-idle-alert.service"
 EOF
+fi
 
 cat << 'EOF' > uconsole-sleep/DEBIAN/prerm
 #!/bin/bash
@@ -99,10 +120,15 @@ systemctl stop sleep-cpu-governor.service
 systemctl disable sleep-power-control.service
 systemctl disable sleep-remap-powerkey.service
 systemctl disable sleep-cpu-governor.service
+EOF
+
+if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
+    cat << 'EOF' >> uconsole-sleep/DEBIAN/prerm
 
 echo "uconsole-sleep: stop the per-user idle alerter with:"
 echo "    systemctl --user disable --now sleep-idle-alert.service"
 EOF
+fi
 
 cat << 'EOF' > uconsole-sleep/DEBIAN/postrm
 #!/bin/bash
