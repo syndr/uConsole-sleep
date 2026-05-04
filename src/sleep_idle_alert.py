@@ -1,3 +1,4 @@
+import grp
 import os
 import random
 import subprocess
@@ -176,6 +177,51 @@ def play_sound(path):
         log(f"audio: failed to spawn pw-play: {e}")
 
 
+def user_in_video_group():
+    try:
+        video_gid = grp.getgrnam("video").gr_gid
+    except KeyError:
+        return None  # group doesn't exist on this system
+    return video_gid in (set(os.getgroups()) | {os.getgid()})
+
+
+def check_flash_runtime():
+    # Returns True iff flashing is configured AND we have write access to
+    # bl_power. Logs a clear diagnostic the first time we discover we
+    # don't, so the per-flash write-error spam stays out of the journal.
+    if not FLASH_ENABLED:
+        return False
+    if not os.path.exists(BL_POWER):
+        log(f"flash: disabled — {BL_POWER} does not exist")
+        return False
+    if os.access(BL_POWER, os.W_OK):
+        return True
+    in_video = user_in_video_group()
+    if in_video is False:
+        log(
+            f"flash: disabled — {BL_POWER} is not writable and the user is not in "
+            "the 'video' group. The shipped udev rule "
+            "(99-uconsole-sleep-backlight.rules) grants write access to that group; "
+            "fix with `sudo usermod -aG video $USER` then log out + back in."
+        )
+    elif in_video is None:
+        log(
+            f"flash: disabled — {BL_POWER} is not writable and the 'video' group "
+            "does not exist on this system; the shipped udev rule cannot grant "
+            "access without it."
+        )
+    else:
+        log(
+            f"flash: disabled — {BL_POWER} is not writable even though the user is in "
+            "the 'video' group. The udev rule may not have applied; try "
+            "`sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=backlight`."
+        )
+    return False
+
+
+FLASH_RUNTIME_OK = check_flash_runtime()
+
+
 def write_bl_power(value):
     try:
         with open(BL_POWER, "w") as f:
@@ -187,7 +233,7 @@ def write_bl_power(value):
 
 
 def flash_screen():
-    if not FLASH_ENABLED:
+    if not FLASH_RUNTIME_OK:
         return
     # Initial long hold: screen on for FLASH_INITIAL_ON_SEC.
     if not write_bl_power(0):
