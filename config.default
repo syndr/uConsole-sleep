@@ -49,3 +49,64 @@
 ### CPU_GOVERNOR_POLL_SEC --- [1~] --- Battery/AC poll interval in seconds
 # default 30
 #CPU_GOVERNOR_POLL_SEC=60
+
+###########################################################################
+# sleep-idle-alert (user service)
+###########################################################################
+
+### IDLE_INITIAL_DELAY --- [1~] --- Seconds of idle-on-battery before "gentle" tier
+# default 900
+#IDLE_INITIAL_DELAY=600
+
+### IDLE_INTERVAL --- [1~] --- Seconds between gentle and nag squawks
+# default 600
+#IDLE_INTERVAL=300
+
+### IDLE_INTERVAL_DUMBASS --- [1~] --- Seconds between dumbass squawks (third tier and beyond)
+# default 120
+#IDLE_INTERVAL_DUMBASS=60
+
+### IDLE_TICK --- [1~] --- Poll resolution + idle threshold for the X11 / swayidle backend
+# default 30
+#IDLE_TICK=15
+
+### IDLE_SOUND_DIR --- path --- Where the alerter looks for tier .ogg files
+###  - Empty string means "$HOME/Music/notifications" (resolved at service start)
+###  - Subdirs warn/, gentle/, nag/, dumbass/ override the flat directory
+###  - Falls back to /usr/share/sounds/freedesktop/stereo/ when nothing is found
+# default empty
+#IDLE_SOUND_DIR=/home/pi/Music/notifications
+
+### IDLE_LOCK_PROCESSES --- space-separated process names --- Optional lock gating
+###  - When non-empty, squawks fire only while one of these processes is running.
+###  - Empty (default) means idle-time only -- no lock requirement.
+# default empty
+#IDLE_LOCK_PROCESSES=hyprlock swaylock xscreensaver light-locker i3lock
+
+### IDLE_FLASH_ENABLED --- [true/false] --- Pulse the backlight alongside each squawk
+# default true
+#IDLE_FLASH_ENABLED=false
+
+### IDLE_FLASH_INITIAL_ON_SEC --- [0.0~] --- Initial long ON-hold (seconds) before pulses
+# default 5.0
+#IDLE_FLASH_INITIAL_ON_SEC=3.0
+
+### IDLE_FLASH_PULSES --- [0~] --- Number of follow-up ON pulses after the initial hold
+# default 5
+#IDLE_FLASH_PULSES=3
+
+### IDLE_FLASH_PULSE_START_SEC --- [0.0~] --- ON duration of the first pulse (seconds)
+# default 2.0
+#IDLE_FLASH_PULSE_START_SEC=1.5
+
+### IDLE_FLASH_PULSE_DECAY --- [0.0-1.0] --- Geometric decay applied to each pulse's ON time
+# default 0.25
+#IDLE_FLASH_PULSE_DECAY=0.5
+
+### IDLE_FLASH_PULSE_OFF_SEC --- [0.0~] --- Fixed OFF gap between pulses (seconds)
+# default 0.25
+#IDLE_FLASH_PULSE_OFF_SEC=0.5
+
+### IDLE_FLASH_PULSE_MIN_SEC --- [0.0~] --- Floor for the decaying ON duration
+# default 0.1
+#IDLE_FLASH_PULSE_MIN_SEC=0.05
