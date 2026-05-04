@@ -1,3 +1,11 @@
+Ver1.6
+  - new sleep-idle-alert user service: cross-DE post-idle escalator with audio tiers and backlight flash
+  - X11 idle detection via python3-xlib; Wayland via swayidle subprocess
+  - on-battery anchored squawk ladder (gentle -> nag -> dumbass); plugging in or activity resets the ladder
+  - falls back to sound-theme-freedesktop for built-in sounds when ~/Music/notifications/ is empty
+  - shipped udev rule grants the video group write on /sys/class/backlight/*/bl_power
+  - Makefile: new user-status / user-logs targets; VERSION 1.6
+
 Ver1.5
   - sleep-power-control: skip CPU freq clamp when on AC, with 30s AC poll while screen is off
   - new sleep-cpu-governor service: drops to `powersave` below 20% battery, restores `schedutil` at >=25% (with hysteresis)
