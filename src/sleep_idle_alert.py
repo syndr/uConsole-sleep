@@ -29,6 +29,21 @@ FLASH_PULSE_MIN_SEC = float(os.environ.get("IDLE_FLASH_PULSE_MIN_SEC") or 0.1)
 
 AUDIO_EXTS = (".ogg", ".oga", ".wav")
 
+# Per-tier curated filename lists (pipe-separated env vars; entries are
+# relative to IDLE_SOUND_DIR). When set, this layer wins over the tier
+# subdir / flat directory / freedesktop fallback layers.
+def _parse_curated(env_name):
+    raw = os.environ.get(env_name) or ""
+    return [p.strip() for p in raw.split("|") if p.strip()]
+
+
+CURATED_SOUNDS = {
+    "warn":    _parse_curated("IDLE_SOUNDS_WARN"),
+    "gentle":  _parse_curated("IDLE_SOUNDS_GENTLE"),
+    "nag":     _parse_curated("IDLE_SOUNDS_NAG"),
+    "dumbass": _parse_curated("IDLE_SOUNDS_DUMBASS"),
+}
+
 FALLBACK_DIR = "/usr/share/sounds/freedesktop/stereo"
 FALLBACK_SOUNDS = {
     "warn":    ["bell.oga", "dialog-information.oga", "message.oga"],
@@ -125,18 +140,24 @@ def lock_gate_open():
 
 
 def pick_sound(tier):
-    # 1. tier-specific subdir of SOUND_DIR
+    # 1. curated filename list for this tier (IDLE_SOUNDS_<TIER>)
+    curated = CURATED_SOUNDS.get(tier, [])
+    if curated:
+        existing = [n for n in curated if os.path.isfile(os.path.join(SOUND_DIR, n))]
+        if existing:
+            return os.path.join(SOUND_DIR, random.choice(existing))
+    # 2. tier-specific subdir of SOUND_DIR
     tier_dir = os.path.join(SOUND_DIR, tier)
     if os.path.isdir(tier_dir):
         files = [f for f in os.listdir(tier_dir) if f.lower().endswith(AUDIO_EXTS)]
         if files:
             return os.path.join(tier_dir, random.choice(files))
-    # 2. flat SOUND_DIR
+    # 3. flat SOUND_DIR
     if os.path.isdir(SOUND_DIR):
         files = [f for f in os.listdir(SOUND_DIR) if f.lower().endswith(AUDIO_EXTS)]
         if files:
             return os.path.join(SOUND_DIR, random.choice(files))
-    # 3. freedesktop fallback
+    # 4. freedesktop fallback
     for name in FALLBACK_SOUNDS.get(tier, []):
         path = os.path.join(FALLBACK_DIR, name)
         if os.path.isfile(path):
@@ -275,6 +296,9 @@ log(f"backlight bl_power: {BL_POWER}")
 log(f"sound dir: {SOUND_DIR} (fallback: {FALLBACK_DIR})")
 log(f"thresholds: gentle@{INITIAL_DELAY}s, nag@+{INTERVAL}s, dumbass@+{INTERVAL_DUMBASS}s")
 log(f"lock gating: {LOCK_PROCESSES if LOCK_PROCESSES else 'off (idle-time only)'}")
+for _tier, _names in CURATED_SOUNDS.items():
+    if _names:
+        log(f"curated sounds [{_tier}]: {len(_names)} entries")
 
 n = 1
 on_batt_seconds = 0
