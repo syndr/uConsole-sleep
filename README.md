@@ -77,6 +77,14 @@ The version baked into the package can be overridden:
 make VERSION=1.7 build
 ```
 
+The idle alerter is optional at build time. To produce a slimmer package
+without the user-level service, the udev rule, and the
+`python3-xlib` / `swayidle` / `sound-theme-freedesktop` dependencies:
+
+```
+make WITH_IDLE_ALERTER=0 build
+```
+
 If you prefer to drive the build script directly:
 
 ```
@@ -96,12 +104,20 @@ systemctl --user daemon-reload
 systemctl --user enable --now sleep-idle-alert.service
 ```
 
-Audio: out of the box the service uses `sound-theme-freedesktop` (declared as
-a Debian dependency) — no setup needed for working sounds. To override with
-custom audio, drop `.ogg` / `.oga` / `.wav` files into
-`~/Music/notifications/`. Per-tier subdirs (`warn/`, `gentle/`, `nag/`,
-`dumbass/`) win over flat files in the directory; flat files win over the
-freedesktop fallback. Override the directory location with `IDLE_SOUND_DIR`.
+Audio resolution per squawk (first match wins):
+
+1. `IDLE_SOUNDS_<TIER>` — pipe-separated curated filename list (relative to
+   `IDLE_SOUND_DIR`); missing files in the list are silently skipped.
+2. `IDLE_SOUND_DIR/<tier>/` subdirectory of `.ogg` / `.oga` / `.wav` files
+   (random pick).
+3. `IDLE_SOUND_DIR` itself, flat (random pick across whatever is in there).
+4. `sound-theme-freedesktop` fallback (`/usr/share/sounds/freedesktop/stereo/`).
+
+The shipped `config.default` sets `IDLE_SOUNDS_<TIER>` to the same per-tier
+filename lists this device's pre-v1.6 hypridle wrapper used. To use the
+freedesktop fallback for everything instead, blank the four `IDLE_SOUNDS_*`
+lines in `/etc/uconsole-sleep/config`. Override `IDLE_SOUND_DIR` to point
+elsewhere if you want a system-wide path or per-tier subdirs.
 
 Screen flash: the shipped udev rule (`/lib/udev/rules.d/99-uconsole-sleep-backlight.rules`)
 grants the `video` group write access on `/sys/class/backlight/*/bl_power`.
@@ -162,6 +178,10 @@ Configuration file: `/etc/uconsole-sleep/config`
 | `IDLE_INTERVAL_DUMBASS` | `120` | Seconds between dumbass-tier squawks |
 | `IDLE_TICK` | `30` | Poll resolution and idle threshold for the X11 / swayidle backend |
 | `IDLE_SOUND_DIR` | (empty) | Sound directory; empty resolves to `$HOME/Music/notifications/` at start |
+| `IDLE_SOUNDS_WARN` | curated | Pipe-separated filename list for the pre-lock warn tier (relative to `IDLE_SOUND_DIR`) |
+| `IDLE_SOUNDS_GENTLE` | curated | Pipe-separated filename list for the gentle tier |
+| `IDLE_SOUNDS_NAG` | curated | Pipe-separated filename list for the nag tier |
+| `IDLE_SOUNDS_DUMBASS` | curated | Pipe-separated filename list for the dumbass tier |
 | `IDLE_LOCK_PROCESSES` | (empty) | Space-separated process names; non-empty gates squawks on at least one being alive |
 | `IDLE_FLASH_ENABLED` | `true` | Pulse the backlight alongside each squawk |
 | `IDLE_FLASH_INITIAL_ON_SEC` | `5.0` | Initial long ON-hold before the pulse train (seconds) |
