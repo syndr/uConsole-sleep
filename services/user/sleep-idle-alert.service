@@ -1,0 +1,14 @@
+[Unit]
+Description=uConsole idle audio + backlight-flash alerter
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+EnvironmentFile=/etc/uconsole-sleep/config
+ExecStart=/usr/local/bin/sleep_idle_alert
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical-session.target
