@@ -72,10 +72,23 @@
 
 ### IDLE_SOUND_DIR --- path --- Where the alerter looks for tier .ogg files
 ###  - Empty string means "$HOME/Music/notifications" (resolved at service start)
-###  - Subdirs warn/, gentle/, nag/, dumbass/ override the flat directory
-###  - Falls back to /usr/share/sounds/freedesktop/stereo/ when nothing is found
+###  - Resolution order per squawk:
+###      1. IDLE_SOUNDS_<TIER> curated filename list (relative to IDLE_SOUND_DIR)
+###      2. IDLE_SOUND_DIR/<tier>/ subdirectory
+###      3. IDLE_SOUND_DIR (flat)
+###      4. /usr/share/sounds/freedesktop/stereo/ (sound-theme-freedesktop)
 # default empty
 #IDLE_SOUND_DIR=/home/pi/Music/notifications
+
+### IDLE_SOUNDS_<TIER> --- pipe-separated filenames --- Curated per-tier pools
+###  - Filenames resolve relative to IDLE_SOUND_DIR.
+###  - Missing files are silently skipped (the layer falls through if none exist).
+###  - The values below mirror the curated lists shipped with the
+###    pre-v1.6 IdleAlert.sh wrapper for this device.
+IDLE_SOUNDS_WARN=Excuse Me Sir.ogg|Psst.ogg|Kim Possible Beep.ogg
+IDLE_SOUNDS_GENTLE=Bleep.ogg|Sifi notification blip.ogg|Galaga.ogg|mainframe04.ogg
+IDLE_SOUNDS_NAG=Grr Argh.ogg|Mouthbreather.ogg|Dethbleep.ogg|Psycho short.ogg
+IDLE_SOUNDS_DUMBASS=Spam 1.ogg|Angerfist.ogg|Predator.ogg|Haunted Mansion Laugh.ogg
 
 ### IDLE_LOCK_PROCESSES --- space-separated process names --- Optional lock gating
 ###  - When non-empty, squawks fire only while one of these processes is running.
