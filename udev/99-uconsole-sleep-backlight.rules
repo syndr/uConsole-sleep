@@ -1,0 +1,1 @@
+SUBSYSTEM=="backlight", ACTION=="add|change", RUN+="/bin/sh -c 'chgrp video /sys%p/bl_power; chmod g+w /sys%p/bl_power'"
