@@ -235,23 +235,35 @@ def write_bl_power(value):
 def flash_screen():
     if not FLASH_RUNTIME_OK:
         return
-    # Initial long hold: screen on for FLASH_INITIAL_ON_SEC.
-    if not write_bl_power(0):
+    # Capture the screen's pre-flash state so we can leave it the way we
+    # found it. Without this, the pulse-train ends with bl_power=4 and
+    # blanks a session that was visibly on.
+    try:
+        with open(BL_POWER) as f:
+            initial = f.read().strip()
+    except OSError as e:
+        log(f"flash: cannot read {BL_POWER}: {e}")
         return
-    time.sleep(FLASH_INITIAL_ON_SEC)
-    if not write_bl_power(4):
-        return
-    # Follow-up pulses: on-time decays geometrically, off-time fixed.
-    dur = FLASH_PULSE_START_SEC
-    for i in range(FLASH_PULSES):
+    try:
+        # Initial long hold: screen on for FLASH_INITIAL_ON_SEC.
         if not write_bl_power(0):
             return
-        time.sleep(dur)
+        time.sleep(FLASH_INITIAL_ON_SEC)
         if not write_bl_power(4):
             return
-        if i < FLASH_PULSES - 1:
-            time.sleep(FLASH_PULSE_OFF_SEC)
-        dur = max(FLASH_PULSE_MIN_SEC, dur * FLASH_PULSE_DECAY)
+        # Follow-up pulses: on-time decays geometrically, off-time fixed.
+        dur = FLASH_PULSE_START_SEC
+        for i in range(FLASH_PULSES):
+            if not write_bl_power(0):
+                return
+            time.sleep(dur)
+            if not write_bl_power(4):
+                return
+            if i < FLASH_PULSES - 1:
+                time.sleep(FLASH_PULSE_OFF_SEC)
+            dur = max(FLASH_PULSE_MIN_SEC, dur * FLASH_PULSE_DECAY)
+    finally:
+        write_bl_power(initial)
 
 
 def squawk(tier):

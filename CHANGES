@@ -12,6 +12,10 @@ Ver1.6
     login regardless of whether the compositor pulls graphical-session.target up
     (KDE/GNOME do; Hyprland/labwc/openbox typically don't); restart backoff
     (RestartSec=10s, StartLimitBurst=5/5min)
+  - sleep-idle-alert: flash now restores the pre-flash bl_power value so the
+    pulse train no longer leaves a lit screen blanked (the bash original was
+    fine ending dark because it only ran during DPMS-off + hyprlock; the
+    Python port has neither gate, so it must restore state)
   - Makefile: new user-status / user-logs targets; VERSION 1.6
 
 Ver1.5
