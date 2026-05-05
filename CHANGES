@@ -8,6 +8,10 @@ Ver1.6
   - shipped udev rule grants the video group write on /sys/class/backlight/*/bl_power
   - idle alerter is optional at build time: `make WITH_IDLE_ALERTER=0 build` skips the script,
     user unit, udev rule, and python3-xlib/swayidle/sound-theme-freedesktop dependencies
+  - sleep-idle-alert unit: WantedBy=default.target so it auto-starts on user
+    login regardless of whether the compositor pulls graphical-session.target up
+    (KDE/GNOME do; Hyprland/labwc/openbox typically don't); restart backoff
+    (RestartSec=10s, StartLimitBurst=5/5min)
   - Makefile: new user-status / user-logs targets; VERSION 1.6
 
 Ver1.5
