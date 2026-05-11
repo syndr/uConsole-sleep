@@ -28,6 +28,16 @@ FLASH_PULSE_DECAY = float(os.environ.get("IDLE_FLASH_PULSE_DECAY") or 0.25)
 FLASH_PULSE_OFF_SEC = float(os.environ.get("IDLE_FLASH_PULSE_OFF_SEC") or 0.25)
 FLASH_PULSE_MIN_SEC = float(os.environ.get("IDLE_FLASH_PULSE_MIN_SEC") or 0.1)
 
+# Optional DPMS hooks. When the compositor has already DPMS-off'd the panel
+# by the time a squawk fires, bl_power pulses are invisible — the panel
+# signal is cut regardless of backlight state. These shell commands let the
+# alerter wake the display for the flash and put it back to sleep afterward.
+# Both empty by default to preserve prior behavior on hosts that don't need
+# them. Per-DE values live in config.default.
+DPMS_WAKE_CMD = os.environ.get("IDLE_DPMS_WAKE_CMD") or ""
+DPMS_SLEEP_CMD = os.environ.get("IDLE_DPMS_SLEEP_CMD") or ""
+DPMS_WAKE_SETTLE_SEC = float(os.environ.get("IDLE_DPMS_WAKE_SETTLE_SEC") or 0.1)
+
 AUDIO_EXTS = (".ogg", ".oga", ".wav")
 
 # Per-tier curated filename lists (pipe-separated env vars; entries are
@@ -232,6 +242,26 @@ def write_bl_power(value):
         return False
 
 
+def _run_dpms_cmd(cmd, label):
+    if not cmd:
+        return
+    try:
+        proc = subprocess.run(
+            cmd,
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            timeout=5,
+        )
+        if proc.returncode != 0:
+            err = (proc.stderr or b"").decode(errors="replace").strip()
+            log(f"dpms {label}: '{cmd}' exited {proc.returncode}{': ' + err if err else ''}")
+    except subprocess.TimeoutExpired:
+        log(f"dpms {label}: '{cmd}' timed out after 5s")
+    except OSError as e:
+        log(f"dpms {label}: failed to spawn '{cmd}': {e}")
+
+
 def flash_screen():
     if not FLASH_RUNTIME_OK:
         return
@@ -245,6 +275,12 @@ def flash_screen():
         log(f"flash: cannot read {BL_POWER}: {e}")
         return
     try:
+        # Wake the panel first so a DPMS-off compositor can't swallow the
+        # flash. Small settle delay lets the panel come up before pulsing.
+        if DPMS_WAKE_CMD:
+            _run_dpms_cmd(DPMS_WAKE_CMD, "wake")
+            if DPMS_WAKE_SETTLE_SEC > 0:
+                time.sleep(DPMS_WAKE_SETTLE_SEC)
         # Initial long hold: screen on for FLASH_INITIAL_ON_SEC.
         if not write_bl_power(0):
             return
@@ -264,6 +300,10 @@ def flash_screen():
             dur = max(FLASH_PULSE_MIN_SEC, dur * FLASH_PULSE_DECAY)
     finally:
         write_bl_power(initial)
+        # Restore DPMS-off so we leave the display the way the compositor
+        # had it. If the user only configured a wake hook, leave the screen on.
+        if DPMS_SLEEP_CMD:
+            _run_dpms_cmd(DPMS_SLEEP_CMD, "sleep")
 
 
 def squawk(tier):
@@ -351,6 +391,10 @@ def make_idle_source():
 current_is_idle = make_idle_source()
 
 log(f"backlight bl_power: {BL_POWER}")
+if DPMS_WAKE_CMD or DPMS_SLEEP_CMD:
+    log(f"dpms hooks: wake={DPMS_WAKE_CMD!r} sleep={DPMS_SLEEP_CMD!r} settle={DPMS_WAKE_SETTLE_SEC}s")
+else:
+    log("dpms hooks: not configured (set IDLE_DPMS_WAKE_CMD / IDLE_DPMS_SLEEP_CMD if the compositor blanks the panel before squawks fire)")
 log(f"sound dir: {SOUND_DIR} (fallback: {FALLBACK_DIR})")
 log(f"thresholds: gentle@{INITIAL_DELAY}s, nag@+{INTERVAL}s, dumbass@+{INTERVAL_DUMBASS}s")
 log(f"lock gating: {LOCK_PROCESSES if LOCK_PROCESSES else 'off (idle-time only)'}")

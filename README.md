@@ -49,6 +49,8 @@ DE-agnostic post-idle escalator that fires audio cues + a backlight-flash patter
 
 The screen flash writes to `/sys/class/backlight/*/bl_power`. The package ships a udev rule that grants the `video` group write access on that path so the service does not need root.
 
+If your compositor turns the panel off via DPMS before the first squawk fires, the backlight pulses are invisible — bl_power has no effect on a panel that the compositor has parked. Set `IDLE_DPMS_WAKE_CMD` and `IDLE_DPMS_SLEEP_CMD` to your compositor's DPMS commands so each flash wakes the panel, pulses, then restores the DPMS-off state. Examples in `config.default` cover Hyprland (`hyprctl dispatch dpms on/off`), sway (`swaymsg "output * power on/off"`), and X11 (`xset dpms force on/off`). Both default to empty so hosts that don't need this stay on the original behavior.
+
 ## How to package and install
 
 The repo includes a `Makefile` that wraps the build and install steps:
@@ -190,6 +192,9 @@ Configuration file: `/etc/uconsole-sleep/config`
 | `IDLE_FLASH_PULSE_DECAY` | `0.25` | Geometric decay applied to each pulse's ON time |
 | `IDLE_FLASH_PULSE_OFF_SEC` | `0.25` | Fixed OFF gap between pulses (seconds) |
 | `IDLE_FLASH_PULSE_MIN_SEC` | `0.1` | Floor for the decaying ON duration |
+| `IDLE_DPMS_WAKE_CMD` | (empty) | Shell command to wake the panel before each flash (e.g. `hyprctl dispatch dpms on`) |
+| `IDLE_DPMS_SLEEP_CMD` | (empty) | Shell command to put the panel back to sleep after each flash |
+| `IDLE_DPMS_WAKE_SETTLE_SEC` | `0.1` | Delay (seconds) between the wake command and the first bl_power pulse |
 
 ## More Information
 

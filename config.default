@@ -123,3 +123,29 @@ IDLE_SOUNDS_DUMBASS=Spam 1.ogg|Angerfist.ogg|Predator.ogg|Haunted Mansion Laugh.
 ### IDLE_FLASH_PULSE_MIN_SEC --- [0.0~] --- Floor for the decaying ON duration
 # default 0.1
 #IDLE_FLASH_PULSE_MIN_SEC=0.05
+
+### IDLE_DPMS_WAKE_CMD --- shell command --- Wake the display before each flash
+###  - Required if the compositor turns the panel off via DPMS before the
+###    first squawk fires; bl_power pulses are invisible to a DPMS-off panel.
+###  - Examples (uncomment one):
+###      Hyprland: hyprctl dispatch dpms on
+###      sway:     swaymsg "output * power on"
+###      X11:      xset dpms force on
+# default empty (no DPMS interaction)
+#IDLE_DPMS_WAKE_CMD=hyprctl dispatch dpms on
+
+### IDLE_DPMS_SLEEP_CMD --- shell command --- Put the display back to sleep after each flash
+###  - Mirror of IDLE_DPMS_WAKE_CMD. Leave empty to keep the screen on once
+###    the flash ends.
+###  - Examples (uncomment one):
+###      Hyprland: hyprctl dispatch dpms off
+###      sway:     swaymsg "output * power off"
+###      X11:      xset dpms force off
+# default empty
+#IDLE_DPMS_SLEEP_CMD=hyprctl dispatch dpms off
+
+### IDLE_DPMS_WAKE_SETTLE_SEC --- [0.0~] --- Settle delay between wake and the first pulse
+###  - Lets the panel come up before bl_power writes start. The 5s INITIAL
+###    ON hold absorbs most panels; bump if your panel wakes slowly.
+# default 0.1
+#IDLE_DPMS_WAKE_SETTLE_SEC=0.3
