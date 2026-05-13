@@ -1,2 +1,4 @@
 *.deb
 uconsole-sleep
+__pycache__/
+*.pyc
