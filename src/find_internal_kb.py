@@ -1,7 +1,7 @@
 import os
 
 
-def find_internal_kb(ids=["1eaf:0024", "feed:0000", "1eaf:0003"]):
+def find_internal_kb(ids=["1eaf:0024", "feed:0000", "1eaf:0003", "1d50:615e"]):
     usb_device_path = ""
 
     for device in os.listdir("/sys/bus/usb/devices/"):
