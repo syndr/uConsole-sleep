@@ -6,6 +6,12 @@ Ver1.6
     tier subdirs and flat IDLE_SOUND_DIR; ships with the prior IdleAlert.sh per-device curation as defaults
   - falls back to sound-theme-freedesktop for built-in sounds when nothing else resolves
   - shipped udev rule grants the video group write on /sys/class/backlight/*/bl_power
+  - sleep-idle-alert: optional DPMS wake/sleep around each flash via IDLE_DPMS_WAKE_CMD /
+    IDLE_DPMS_SLEEP_CMD (+ IDLE_DPMS_WAKE_SETTLE_SEC), so backlight pulses stay visible when
+    the compositor has DPMS-off'd the panel; both default empty to preserve prior behavior.
+    config.default ships Hyprland / sway / X11 examples
+  - keyboard detection: add ZMK bb9900 (1d50:615e) to the built-in keyboard VID:PID allowlist
+    in find_internal_kb.py
   - idle alerter is optional at build time: `make WITH_IDLE_ALERTER=0 build` skips the script,
     user unit, udev rule, and python3-xlib/swayidle/sound-theme-freedesktop dependencies
   - sleep-idle-alert unit: WantedBy=default.target so it auto-starts on user

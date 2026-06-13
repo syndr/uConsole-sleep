@@ -1,7 +1,7 @@
 # uConsole-sleep v1.6
 ### Sleep Service Package for uConsole
 
-This service is built for **Ubuntu 22.04** and implemented in **Python**.
+This service is built for **Debian** and implemented in **Python**. It is primarily developed against the community "Rex" Debian image for the uConsole, and should also work on other Debian-based distributions (including Ubuntu).
 
 It monitors power key events and controls the screen power (on/off).  
 Initially, power key events were detected using a polling loop, but this was later replaced with **epoll** to reduce CPU usage.
@@ -50,6 +50,22 @@ DE-agnostic post-idle escalator that fires audio cues + a backlight-flash patter
 The screen flash writes to `/sys/class/backlight/*/bl_power`. The package ships a udev rule that grants the `video` group write access on that path so the service does not need root.
 
 If your compositor turns the panel off via DPMS before the first squawk fires, the backlight pulses are invisible — bl_power has no effect on a panel that the compositor has parked. Set `IDLE_DPMS_WAKE_CMD` and `IDLE_DPMS_SLEEP_CMD` to your compositor's DPMS commands so each flash wakes the panel, pulses, then restores the DPMS-off state. Examples in `config.default` cover Hyprland (`hyprctl dispatch dpms on/off`), sway (`swaymsg "output * power on/off"`), and X11 (`xset dpms force on/off`). Both default to empty so hosts that don't need this stay on the original behavior.
+
+## Keyboard detection
+
+The power-management services identify the uConsole's built-in keyboard by USB
+`VID:PID`, matched against an allowlist in `src/find_internal_kb.py`:
+
+```python
+def find_internal_kb(ids=["1eaf:0024", "feed:0000", "1eaf:0003", "1d50:615e"]):
+```
+
+The shipped list covers the official keyboard firmware plus the ZMK `bb9900`
+(`1d50:615e`). If you run a different third-party keyboard, find its `VID:PID`
+with `lsusb` and add it to that list, then rebuild and reinstall (`make
+reinstall`). `sleep-power-control` exits at startup if it can't find a matching
+keyboard, so an unrecognized keyboard must be added here before the service
+will run.
 
 ## How to package and install
 
