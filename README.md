@@ -42,6 +42,19 @@ Switches the cpufreq governor based on battery capacity. Polls every 30 seconds;
 
 Manages DRM/framebuffer display power and backlight control.
 
+On its own it blanks the backlight, blanks the framebuffer and forces the DRM
+connector off, but a Wayland compositor does not notice and keeps scanning out to
+the dark panel. Measured on a CM5 uConsole under Hyprland, a power-key sleep then
+draws ~0.7 W more than the compositor's own DPMS-off (the SoC rails that feed the
+display pipeline stay at awake levels), and the first press sometimes only
+flickers the backlight. Set `POWERKEY_DPMS_OFF_CMD` / `POWERKEY_DPMS_ON_CMD` to
+your compositor's DPMS commands (`hyprctl dispatch dpms off`, `swaymsg "output *
+power off"`, `xset dpms force off`, and the `on` mirrors) and the power key asks
+the compositor first. The service runs as root; the command is run as the
+logged-in graphical user with that session's environment, discovered from the
+running compositor's process (`user_session.py` prints what it finds). Both
+default to empty, which is the previous behaviour.
+
 ### sleep-idle-alert (user service)
 `/usr/local/bin/sleep_idle_alert` (installed as `/usr/local/lib/systemd/user/sleep-idle-alert.service`)
 
@@ -113,6 +126,16 @@ python3 /usr/local/lib/uconsole-sleep/kb_hid_led.py off kana      # keyboard -> 
 
 Config: `KB_SLEEP_LED`, `KB_SLEEP_LED_WAIT_SEC`, `KB_SLEEP_USB_SUSPEND`,
 `KB_SLEEP_DELAY_SEC` (see [Configuration](#configuration)).
+
+**Troubleshooting: keyboard dead after wake.** If the journal shows `kb: bound but
+unconfigured` (and `dmesg` shows `usb 1-1.1: can't set config #1, error -71`), the
+keyboard's controller stopped answering USB requests while asleep. Seen once on a
+bb9900 after plugging the charger in during sleep. Nothing on the host can revive
+it: the internal hub's port power is ganged, so neither the kernel nor this package
+can power-cycle the keyboard alone, and a USB reset only makes it drop off the bus.
+Do **not** re-probe the hub (`unbind`/`bind` of `1-1`): that wedges both full-speed
+ports until a reboot. Recovery: `reboot`; if the keyboard is still missing, `poweroff`
+and power on, which cuts the keyboard's 5 V.
 
 ## Sleep-time knobs: WiFi power save, Bluetooth, CPU quota
 
@@ -258,6 +281,9 @@ Configuration file: `/etc/uconsole-sleep/config`
 |---|---|---|
 | `HOLD_TRIGGER_SEC` | `0.7` | Hold duration (seconds) to trigger power interactive menu |
 | `SAVING_CPU_FREQ` | `100,100` | CPU frequency (MHz) `<min,max>` applied during power saving |
+| `POWERKEY_DPMS_OFF_CMD` | (empty) | Compositor DPMS-off command run as the session user before the power-key sleep writes (e.g. `hyprctl dispatch dpms off`) |
+| `POWERKEY_DPMS_ON_CMD` | (empty) | Mirror for wake (e.g. `hyprctl dispatch dpms on`) |
+| `POWERKEY_DPMS_SETTLE_SEC` | `0.3` | Pause after a DPMS command before the sysfs writes |
 | `DISABLE_POWER_OFF_DRM` | `no` | Disable turning off DRM on sleep (set `yes` if screen recovery has issues) |
 | `DISABLE_POWER_OFF_KB` | `no` | Disable turning off keyboard on sleep (set `yes` to allow keyboard to control its backlight) |
 | `KB_SLEEP_LED` | `kana` | HID LED bit set on the keyboard while the host sleeps (`none` disables); see [Keyboard sleep signal](#keyboard-sleep-signal) |
