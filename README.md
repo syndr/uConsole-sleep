@@ -127,6 +127,16 @@ python3 /usr/local/lib/uconsole-sleep/kb_hid_led.py off kana      # keyboard -> 
 Config: `KB_SLEEP_LED`, `KB_SLEEP_LED_WAIT_SEC`, `KB_SLEEP_USB_SUSPEND`,
 `KB_SLEEP_DELAY_SEC` (see [Configuration](#configuration)).
 
+**Troubleshooting: keyboard dead after wake.** If the journal shows `kb: bound but
+unconfigured` (and `dmesg` shows `usb 1-1.1: can't set config #1, error -71`), the
+keyboard's controller stopped answering USB requests while asleep. Seen once on a
+bb9900 after plugging the charger in during sleep. Nothing on the host can revive
+it: the internal hub's port power is ganged, so neither the kernel nor this package
+can power-cycle the keyboard alone, and a USB reset only makes it drop off the bus.
+Do **not** re-probe the hub (`unbind`/`bind` of `1-1`): that wedges both full-speed
+ports until a reboot. Recovery: `reboot`; if the keyboard is still missing, `poweroff`
+and power on, which cuts the keyboard's 5 V.
+
 ## Sleep-time knobs: WiFi power save, Bluetooth, CPU quota
 
 Three optional measures, all off by default, applied in the same deferred step as

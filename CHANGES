@@ -23,6 +23,9 @@ Ver1.7
     compositor's DPMS command as the logged-in user around the power-key sleep/wake
     (session env discovered from the compositor process; new src/user_session.py).
     Without it Hyprland keeps scanning out to the dark panel, ~0.7 W on a CM5 uConsole.
+  - sleep-power-control: after re-attaching the keyboard, detect a bind that left the
+    device unconfigured (keyboard controller not answering) and log the recovery steps
+    instead of the misleading "no hidraw node" line
   - Makefile: VERSION 1.7
 
 Ver1.6
