@@ -19,6 +19,10 @@ Ver1.7
     (runtime systemd CPUQuota on user slices). New src/sleep_knobs.py; `iw` dependency.
     Ships a polkit rule allowing org.blueman.rfkill.setstate for active local sessions
     so the blueman applet does not prompt for a password when Bluetooth is blocked.
+  - sleep-remap-powerkey: POWERKEY_DPMS_OFF_CMD / POWERKEY_DPMS_ON_CMD run the
+    compositor's DPMS command as the logged-in user around the power-key sleep/wake
+    (session env discovered from the compositor process; new src/user_session.py).
+    Without it Hyprland keeps scanning out to the dark panel, ~0.7 W on a CM5 uConsole.
   - Makefile: VERSION 1.7
 
 Ver1.6
