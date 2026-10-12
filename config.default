@@ -54,6 +54,27 @@
 # default 1.0
 #KB_SLEEP_DELAY_SEC=0
 
+### SLEEP_WIFI_POWERSAVE --- [yes/no] --- 802.11 power save while asleep
+###  - Applied with the deferred keyboard sleep (KB_SLEEP_DELAY_SEC) on every
+###    wireless interface via `iw`, restored to its previous state on wake.
+###    The link stays up (SSH keeps working); first-packet latency goes up.
+# default no
+#SLEEP_WIFI_POWERSAVE=yes
+
+### SLEEP_BT_OFF --- [yes/no] --- Power the Bluetooth adapter off while asleep
+###  - Only when no device is connected at sleep time; powered back on at wake
+###    only if this service turned it off.
+# default no
+#SLEEP_BT_OFF=yes
+
+### SLEEP_CPU_QUOTA --- [1~] --- Cap user processes to this % of one CPU while asleep
+###  - Sets a runtime systemd CPUQuota on every user-<uid>.slice at sleep and
+###    clears it on wake. Nothing is stopped or signalled; the aggregate CPU
+###    time of your sessions is capped, so a build or download you left
+###    running finishes slower. 100 = one full core, 400 = no effective cap.
+# default empty (no cap)
+#SLEEP_CPU_QUOTA=50
+
 ### DISABLE_CPU_MIN_FREQ --- [yes/no] --- Disable set cpu freq max to min
 # default no
 #DISABLE_CPU_MIN_FREQ=yes

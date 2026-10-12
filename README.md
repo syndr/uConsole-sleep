@@ -114,7 +114,27 @@ python3 /usr/local/lib/uconsole-sleep/kb_hid_led.py off kana      # keyboard -> 
 Config: `KB_SLEEP_LED`, `KB_SLEEP_LED_WAIT_SEC`, `KB_SLEEP_USB_SUSPEND`,
 `KB_SLEEP_DELAY_SEC` (see [Configuration](#configuration)).
 
-## How to package and install
+## Sleep-time knobs: WiFi power save, Bluetooth, CPU quota
+
+Three optional measures, all off by default, applied in the same deferred step as
+the keyboard sleep and reverted on wake:
+
+| Option | What it does | Measured / expected gain |
+|---|---|---|
+| `SLEEP_WIFI_POWERSAVE=yes` | `iw dev <wlan> set power_save on` on every wireless interface; previous state restored on wake. The link stays up, so SSH keeps working; first-packet latency rises. | ~0.1 to 0.15 W of the ~0.28 W radio rail |
+| `SLEEP_BT_OFF=yes` | Powers the adapter off if no device is connected; back on at wake only if the service turned it off. | tens of mW |
+| `SLEEP_CPU_QUOTA=<pct>` | Runtime `CPUQuota=<pct>%` on every `user-<uid>.slice`; cleared on wake. Processes keep running, capped in aggregate. | ~0.2 to 0.3 W on this uConsole: the CPU rail idled at ~0.45 W asleep but averaged ~0.75 W with bursts from background apps |
+
+Why these and not more: the BCM2712 kernel has no suspend states at all
+(`/sys/power/state` is empty) and no cpuidle driver, so "sleep" is screen-off with
+the system running. Measured on a CM5 uConsole on battery: ~4.2 W awake idle,
+~3.2 W asleep, of which the CPU is ~0.45 W and the panel plus display pipeline
+(already off) were ~1.0 W. The Pi 5 firmware does not allow `arm_freq_min` below
+1500 MHz, so the `SAVING_CPU_FREQ` clamp is already at its floor. The fan costs
+~0.2 W only while it spins and stops by itself once the CPU cools below its
+hysteresis; a sleep-specific fan curve is not worth it.
+
+
 
 The repo includes a `Makefile` that wraps the build and install steps:
 
@@ -235,6 +255,9 @@ Configuration file: `/etc/uconsole-sleep/config`
 | `KB_SLEEP_LED_WAIT_SEC` | `2` | Wait (seconds) for the keyboard's hidraw node after re-attach before clearing the LED |
 | `KB_SLEEP_USB_SUSPEND` | `no` | Experimental: USB-suspend the detached keyboard while the screen is off (breaks on the uConsole hub, needs a reboot) |
 | `KB_SLEEP_DELAY_SEC` | `1.0` | Grace period (seconds) before keyboard sleep; cancelled if the screen comes back (keeps the keyboard awake across a backlight flash) |
+| `SLEEP_WIFI_POWERSAVE` | `no` | 802.11 power save on all wireless interfaces while asleep; restored on wake |
+| `SLEEP_BT_OFF` | `no` | Bluetooth adapter off while asleep if nothing is connected; back on at wake |
+| `SLEEP_CPU_QUOTA` | (empty) | Runtime systemd CPUQuota (percent of one CPU) on user slices while asleep; cleared on wake |
 | `DISABLE_CPU_MIN_FREQ` | `no` | Disable setting CPU max frequency to minimum during sleep |
 | `POLL_AC_INTERVAL_SEC` | `30` | AC poll interval (seconds) while screen is off — picks up plug/unplug without waking the screen |
 | `CPU_GOVERNOR_NORMAL` | `schedutil` | Governor used at or above the exit threshold |
