@@ -124,7 +124,7 @@ asleep is picked up by the AC poll (`POLL_AC_INTERVAL_SEC`).
 | Option | What it does | Measured / expected gain |
 |---|---|---|
 | `SLEEP_WIFI_POWERSAVE=yes` | `iw dev <wlan> set power_save on` on every wireless interface; previous state restored on wake. The link stays up, so SSH keeps working; first-packet latency rises. | none on the CM5 uConsole: brcmfmac already runs with power save on. Kept for hosts where it is off. |
-| `SLEEP_BT_OFF=yes` | Powers the adapter off if no device is connected; back on at wake only if the service turned it off. | tens of mW |
+| `SLEEP_BT_OFF=yes` | rfkill soft-blocks Bluetooth if no device is connected; unblocked at wake only if the service blocked it. rfkill rather than `bluetoothctl` so blueman does not answer with a polkit prompt. | not measurable on the radio rail; idle BT is tiny |
 | `SLEEP_CPU_QUOTA=<pct>` | Runtime `CPUQuota=<pct>%` on every `user-<uid>.slice`; cleared on wake. Processes keep running, capped in aggregate. | ~0.2 W measured at 50% on this uConsole: the CPU rail averaged 0.80 A asleep with the cap against 1.10 A without, with the same background apps |
 
 Why these and not more: the BCM2712 kernel has no suspend states at all
@@ -258,7 +258,7 @@ Configuration file: `/etc/uconsole-sleep/config`
 | `KB_SLEEP_USB_SUSPEND` | `no` | Experimental: USB-suspend the detached keyboard while the screen is off (breaks on the uConsole hub, needs a reboot) |
 | `KB_SLEEP_DELAY_SEC` | `1.0` | Grace period (seconds) before keyboard sleep; cancelled if the screen comes back (keeps the keyboard awake across a backlight flash) |
 | `SLEEP_WIFI_POWERSAVE` | `no` | 802.11 power save on all wireless interfaces while asleep; restored on wake |
-| `SLEEP_BT_OFF` | `no` | Bluetooth adapter off while asleep if nothing is connected; back on at wake |
+| `SLEEP_BT_OFF` | `no` | rfkill-block Bluetooth while asleep if nothing is connected; unblocked at wake |
 | `SLEEP_CPU_QUOTA` | (empty) | Runtime systemd CPUQuota (percent of one CPU) on user slices while asleep; cleared on wake |
 | `DISABLE_CPU_MIN_FREQ` | `no` | Disable setting CPU max frequency to minimum during sleep |
 | `POLL_AC_INTERVAL_SEC` | `30` | AC poll interval (seconds) while screen is off — picks up plug/unplug without waking the screen |

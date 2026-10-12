@@ -15,7 +15,7 @@ Ver1.7
     (removes the "[Errno 16] Device or resource busy" journal noise at startup)
   - sleep-power-control: optional sleep-time knobs, off by default, applied with the
     deferred keyboard sleep and reverted on wake: SLEEP_WIFI_POWERSAVE (iw power save,
-    link stays up), SLEEP_BT_OFF (adapter off when nothing is connected), SLEEP_CPU_QUOTA
+    link stays up), SLEEP_BT_OFF (rfkill block when nothing is connected), SLEEP_CPU_QUOTA
     (runtime systemd CPUQuota on user slices). New src/sleep_knobs.py; `iw` dependency.
   - Makefile: VERSION 1.7
 
