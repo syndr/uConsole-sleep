@@ -117,13 +117,15 @@ Config: `KB_SLEEP_LED`, `KB_SLEEP_LED_WAIT_SEC`, `KB_SLEEP_USB_SUSPEND`,
 ## Sleep-time knobs: WiFi power save, Bluetooth, CPU quota
 
 Three optional measures, all off by default, applied in the same deferred step as
-the keyboard sleep and reverted on wake:
+the keyboard sleep and reverted on wake. Like the CPU frequency clamp they apply
+**only on battery**: plugged in means full performance, and a plug or unplug while
+asleep is picked up by the AC poll (`POLL_AC_INTERVAL_SEC`).
 
 | Option | What it does | Measured / expected gain |
 |---|---|---|
-| `SLEEP_WIFI_POWERSAVE=yes` | `iw dev <wlan> set power_save on` on every wireless interface; previous state restored on wake. The link stays up, so SSH keeps working; first-packet latency rises. | ~0.1 to 0.15 W of the ~0.28 W radio rail |
+| `SLEEP_WIFI_POWERSAVE=yes` | `iw dev <wlan> set power_save on` on every wireless interface; previous state restored on wake. The link stays up, so SSH keeps working; first-packet latency rises. | none on the CM5 uConsole: brcmfmac already runs with power save on. Kept for hosts where it is off. |
 | `SLEEP_BT_OFF=yes` | Powers the adapter off if no device is connected; back on at wake only if the service turned it off. | tens of mW |
-| `SLEEP_CPU_QUOTA=<pct>` | Runtime `CPUQuota=<pct>%` on every `user-<uid>.slice`; cleared on wake. Processes keep running, capped in aggregate. | ~0.2 to 0.3 W on this uConsole: the CPU rail idled at ~0.45 W asleep but averaged ~0.75 W with bursts from background apps |
+| `SLEEP_CPU_QUOTA=<pct>` | Runtime `CPUQuota=<pct>%` on every `user-<uid>.slice`; cleared on wake. Processes keep running, capped in aggregate. | ~0.2 W measured at 50% on this uConsole: the CPU rail averaged 0.80 A asleep with the cap against 1.10 A without, with the same background apps |
 
 Why these and not more: the BCM2712 kernel has no suspend states at all
 (`/sys/power/state` is empty) and no cpuidle driver, so "sleep" is screen-off with

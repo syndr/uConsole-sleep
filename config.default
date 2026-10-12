@@ -54,10 +54,16 @@
 # default 1.0
 #KB_SLEEP_DELAY_SEC=0
 
+### The three SLEEP_* knobs below apply only on battery, like the cpu freq
+### clamp: plugged in means full performance. Plugging in while asleep lifts
+### them at the next AC poll (POLL_AC_INTERVAL_SEC); unplugging applies them.
+
 ### SLEEP_WIFI_POWERSAVE --- [yes/no] --- 802.11 power save while asleep
 ###  - Applied with the deferred keyboard sleep (KB_SLEEP_DELAY_SEC) on every
 ###    wireless interface via `iw`, restored to its previous state on wake.
 ###    The link stays up (SSH keeps working); first-packet latency goes up.
+###    On the uConsole CM5 the brcmfmac driver already has power save on, so
+###    this is a no-op there (the log says "already on").
 # default no
 #SLEEP_WIFI_POWERSAVE=yes
 
