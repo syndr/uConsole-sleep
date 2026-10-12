@@ -7,6 +7,7 @@ import inotify.constants
 from find_backlight import find_backlight
 from find_internal_kb import find_internal_kb
 import kb_hid_led
+import sleep_knobs
 
 SAVING_CPU_FREQ = os.environ.get("SAVING_CPU_FREQ")
 DISABLE_POWER_OFF_KB = os.environ.get("DISABLE_POWER_OFF_KB") == "yes"
@@ -16,6 +17,9 @@ KB_SLEEP_LED = os.environ.get("KB_SLEEP_LED", "kana")
 KB_SLEEP_LED_WAIT_SEC = float(os.environ.get("KB_SLEEP_LED_WAIT_SEC") or 2)
 KB_SLEEP_USB_SUSPEND = (os.environ.get("KB_SLEEP_USB_SUSPEND") or "no") == "yes"
 KB_SLEEP_DELAY_SEC = float(os.environ.get("KB_SLEEP_DELAY_SEC") or 1.0)
+SLEEP_WIFI_POWERSAVE = os.environ.get("SLEEP_WIFI_POWERSAVE") == "yes"
+SLEEP_BT_OFF = os.environ.get("SLEEP_BT_OFF") == "yes"
+SLEEP_CPU_QUOTA = (os.environ.get("SLEEP_CPU_QUOTA") or "").strip().rstrip("%")
 
 AC_ONLINE_PATH = "/sys/class/power_supply/axp22x-ac/online"
 
@@ -150,6 +154,46 @@ def kb_wake():
     kb_set_led(False)
 
 
+# --- sleep knobs (applied with the deferred keyboard sleep, reverted on wake) --
+
+knobs = []
+if SLEEP_WIFI_POWERSAVE:
+    knobs.append(sleep_knobs.WifiPowerSave())
+if SLEEP_BT_OFF:
+    knobs.append(sleep_knobs.BluetoothOff())
+if SLEEP_CPU_QUOTA:
+    try:
+        quota = int(SLEEP_CPU_QUOTA)
+        if quota <= 0:
+            raise ValueError
+        knobs.append(sleep_knobs.CpuQuota(quota))
+    except ValueError:
+        print(f"sleep knobs: ignoring SLEEP_CPU_QUOTA={SLEEP_CPU_QUOTA!r} (want a positive percent)")
+knobs_applied = False
+
+
+def knobs_sleep():
+    global knobs_applied
+    for k in knobs:
+        try:
+            k.sleep()
+        except Exception as e:
+            print(f"sleep knobs: {type(k).__name__} sleep failed: {e}")
+    knobs_applied = True
+
+
+def knobs_wake():
+    global knobs_applied
+    if not knobs_applied:
+        return
+    for k in reversed(knobs):
+        try:
+            k.wake()
+        except Exception as e:
+            print(f"sleep knobs: {type(k).__name__} wake failed: {e}")
+    knobs_applied = False
+
+
 # --- state --------------------------------------------------------------------
 
 kb_asleep = False
@@ -160,6 +204,7 @@ def screen_on():
     global kb_asleep, kb_sleep_due
     apply_onscreen_cpu_freq()
     kb_sleep_due = None
+    knobs_wake()
     if kb_asleep:
         kb_wake()
         kb_asleep = False
@@ -183,6 +228,7 @@ def run_pending_kb_sleep(force=False):
     if not kb_asleep:
         kb_sleep()
         kb_asleep = True
+        knobs_sleep()
 
 
 def control_by_state(state):
@@ -216,6 +262,7 @@ if kb_led_usage is None:
     print(f"kb sleep led: disabled (KB_SLEEP_LED={KB_SLEEP_LED!r})")
 else:
     print(f"kb sleep led: {KB_SLEEP_LED}, usb suspend: {'yes' if KB_SLEEP_USB_SUSPEND else 'no'}, sleep delay: {KB_SLEEP_DELAY_SEC}s")
+print("sleep knobs: " + (", ".join(type(k).__name__ for k in knobs) or "none"))
 
 if not SAVING_CPU_FREQ:
     with open(os.path.join(cpu_policy_path, "cpuinfo_min_freq"), "r") as f:
@@ -259,6 +306,8 @@ try:
         apply_onscreen_cpu_freq()
         kb_wake()
         kb_asleep = False
+        # A crashed earlier run may have left a runtime CPU quota behind.
+        sleep_knobs.CpuQuota.clear_all()
 #    control_by_state(screen_state != "disabled")
 except Exception as e:
     print(f"Error occurred: {e}, on init. ignored")
