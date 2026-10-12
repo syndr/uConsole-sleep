@@ -70,6 +70,14 @@ def kb_is_bound():
     return os.path.islink(os.path.join(kb_device_path, "driver"))
 
 
+def kb_is_configured():
+    try:
+        with open(os.path.join(kb_device_path, "bConfigurationValue"), "r") as f:
+            return f.read().strip() != ""
+    except OSError:
+        return False
+
+
 def kb_set_led(on):
     """Set/clear the sleep LED bit. Never raises; logs the outcome."""
     global kb_led_unsupported_logged
@@ -151,6 +159,15 @@ def kb_wake():
                 f.write(kb_device_id)
             print("kb power state: bind")
         kb_write_power_control("on")
+        if not kb_is_configured():
+            # The generic USB driver binds even when SET_CONFIGURATION fails
+            # ("can't set config #1, error -71" in dmesg). Seen when the
+            # keyboard MCU hung during sleep: nothing on the host can revive
+            # it (the hub's port power is ganged), only a power cycle.
+            print("kb: bound but unconfigured; the keyboard is not answering USB "
+                  "requests (its controller is likely hung). Reboot, or power the "
+                  "uConsole off and on; see README 'Keyboard sleep signal'.")
+            return
     kb_set_led(False)
 
 
