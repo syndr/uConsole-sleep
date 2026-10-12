@@ -1,3 +1,20 @@
+Ver1.7
+  - sleep-power-control: keyboard sleep signal. Before detaching the keyboard the
+    service sets one bit (default: Kana) in the keyboard's HID LED output report and
+    clears it after re-attach; the layout is read from the report descriptor. Firmware
+    that understands it (uConsole-tweaks/zmk-uc9900 on the bb9900) darkens the key
+    backlight and trackpad light and parks itself. KB_SLEEP_LED / KB_SLEEP_LED_WAIT_SEC.
+    New helper src/kb_hid_led.py, also a CLI for manual testing.
+  - sleep-power-control: optional USB suspend of the keyboard after the driver unbind,
+    KB_SLEEP_USB_SUSPEND, default no: on the uConsole hub the bb9900 suspends but does
+    not resume (runtime_status=error, "can't set config #1, error -22" on rebind)
+  - sleep-power-control: keyboard sleep is deferred by KB_SLEEP_DELAY_SEC (1s) and
+    cancelled if the screen comes back, so sleep-idle-alert's backlight flash wakes the
+    keyboard once instead of detaching/re-attaching it on every pulse
+  - sleep-power-control: skip bind/unbind when the keyboard is already in that state
+    (removes the "[Errno 16] Device or resource busy" journal noise at startup)
+  - Makefile: VERSION 1.7
+
 Ver1.6
   - new sleep-idle-alert user service: cross-DE post-idle escalator with audio tiers and backlight flash
   - X11 idle detection via python3-xlib; Wayland via swayidle subprocess

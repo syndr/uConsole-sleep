@@ -1,4 +1,4 @@
-VERSION ?= 1.6
+VERSION ?= 1.7
 WITH_IDLE_ALERTER ?= 1
 DEB := uconsole-sleep.deb
 APT_DEPS := python3-inotify python3-uinput
