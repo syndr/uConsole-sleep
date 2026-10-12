@@ -10,7 +10,7 @@ APT_DEPS += python3-xlib swayidle sound-theme-freedesktop
 USER_SERVICES += sleep-idle-alert
 endif
 
-SOURCES := $(wildcard src/*.py services/*.service services/user/*.service udev/*.rules) config.default make_uconsole-sleep_package.sh
+SOURCES := $(wildcard src/*.py services/*.service services/user/*.service udev/*.rules polkit/*.rules) config.default make_uconsole-sleep_package.sh
 
 .PHONY: all build deps install uninstall reinstall clean status logs user-status user-logs help
 
