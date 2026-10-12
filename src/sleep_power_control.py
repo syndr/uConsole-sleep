@@ -173,7 +173,13 @@ knobs_applied = False
 
 
 def knobs_sleep():
+    """Apply the knobs, but only on battery: plugged in, full performance."""
     global knobs_applied
+    if knobs_applied or not knobs:
+        return
+    if is_ac_plugged():
+        print("sleep knobs: ac plugged, not applied")
+        return
     for k in knobs:
         try:
             k.sleep()
@@ -348,6 +354,11 @@ while True:
                     print(f"AC state changed while screen off: {last_ac_plugged} -> {ac}")
                     last_ac_plugged = ac
                     apply_offscreen_cpu_freq()
+                    if kb_asleep:
+                        if ac:
+                            knobs_wake()
+                        else:
+                            knobs_sleep()
 
     except Exception as e:
         print(f"Error occurred: {e}")
