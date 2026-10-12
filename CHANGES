@@ -17,6 +17,8 @@ Ver1.7
     deferred keyboard sleep and reverted on wake: SLEEP_WIFI_POWERSAVE (iw power save,
     link stays up), SLEEP_BT_OFF (rfkill block when nothing is connected), SLEEP_CPU_QUOTA
     (runtime systemd CPUQuota on user slices). New src/sleep_knobs.py; `iw` dependency.
+    Ships a polkit rule allowing org.blueman.rfkill.setstate for active local sessions
+    so the blueman applet does not prompt for a password when Bluetooth is blocked.
   - Makefile: VERSION 1.7
 
 Ver1.6

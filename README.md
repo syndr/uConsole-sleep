@@ -124,8 +124,15 @@ asleep is picked up by the AC poll (`POLL_AC_INTERVAL_SEC`).
 | Option | What it does | Measured / expected gain |
 |---|---|---|
 | `SLEEP_WIFI_POWERSAVE=yes` | `iw dev <wlan> set power_save on` on every wireless interface; previous state restored on wake. The link stays up, so SSH keeps working; first-packet latency rises. | none on the CM5 uConsole: brcmfmac already runs with power save on. Kept for hosts where it is off. |
-| `SLEEP_BT_OFF=yes` | rfkill soft-blocks Bluetooth if no device is connected; unblocked at wake only if the service blocked it. rfkill rather than `bluetoothctl` so blueman does not answer with a polkit prompt. | not measurable on the radio rail; idle BT is tiny |
+| `SLEEP_BT_OFF=yes` | rfkill soft-blocks Bluetooth if no device is connected; unblocked at wake only if the service blocked it. | not measurable on the radio rail; idle BT is tiny |
 | `SLEEP_CPU_QUOTA=<pct>` | Runtime `CPUQuota=<pct>%` on every `user-<uid>.slice`; cleared on wake. Processes keep running, capped in aggregate. | ~0.2 W measured at 50% on this uConsole: the CPU rail averaged 0.80 A asleep with the cap against 1.10 A without, with the same background apps |
+
+If you run the blueman applet, it answers any Bluetooth state change it did not
+make itself by setting rfkill through its mechanism, which asks polkit for
+`org.blueman.rfkill.setstate` and pops a password prompt. The package ships
+`/etc/polkit-1/rules.d/50-uconsole-sleep-rfkill.rules`, which allows that action
+for an active local session, so the prompt does not appear. Harmless without
+blueman.
 
 Why these and not more: the BCM2712 kernel has no suspend states at all
 (`/sys/power/state` is empty) and no cpuidle driver, so "sleep" is screen-off with

@@ -7,6 +7,7 @@ mkdir -p uconsole-sleep/usr/local/bin
 mkdir -p uconsole-sleep/usr/local/lib/uconsole-sleep
 mkdir -p uconsole-sleep/etc/uconsole-sleep
 mkdir -p uconsole-sleep/etc/systemd/system
+mkdir -p uconsole-sleep/etc/polkit-1/rules.d
 
 if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
     mkdir -p uconsole-sleep/usr/local/lib/systemd/user
@@ -56,6 +57,7 @@ EOF
 fi
 
 cp "$SCRIPT_DIR/config.default" uconsole-sleep/etc/uconsole-sleep/config.default
+cp "$SCRIPT_DIR/polkit/50-uconsole-sleep-rfkill.rules" uconsole-sleep/etc/polkit-1/rules.d/50-uconsole-sleep-rfkill.rules
 
 cp "$SCRIPT_DIR/services/sleep-power-control.service"  uconsole-sleep/etc/systemd/system/sleep-power-control.service
 cp "$SCRIPT_DIR/services/sleep-remap-powerkey.service" uconsole-sleep/etc/systemd/system/sleep-remap-powerkey.service
