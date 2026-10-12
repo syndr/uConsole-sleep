@@ -67,9 +67,11 @@
 # default no
 #SLEEP_WIFI_POWERSAVE=yes
 
-### SLEEP_BT_OFF --- [yes/no] --- Power the Bluetooth adapter off while asleep
-###  - Only when no device is connected at sleep time; powered back on at wake
-###    only if this service turned it off.
+### SLEEP_BT_OFF --- [yes/no] --- rfkill-block Bluetooth while asleep
+###  - Only when no device is connected at sleep time; unblocked at wake only
+###    if this service blocked it. Uses the kernel rfkill switch rather than
+###    bluetoothctl so desktop applets (blueman) see a consistent state and
+###    do not raise a polkit prompt.
 # default no
 #SLEEP_BT_OFF=yes
 
