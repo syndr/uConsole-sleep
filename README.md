@@ -114,7 +114,36 @@ python3 /usr/local/lib/uconsole-sleep/kb_hid_led.py off kana      # keyboard -> 
 Config: `KB_SLEEP_LED`, `KB_SLEEP_LED_WAIT_SEC`, `KB_SLEEP_USB_SUSPEND`,
 `KB_SLEEP_DELAY_SEC` (see [Configuration](#configuration)).
 
-## How to package and install
+## Sleep-time knobs: WiFi power save, Bluetooth, CPU quota
+
+Three optional measures, all off by default, applied in the same deferred step as
+the keyboard sleep and reverted on wake. Like the CPU frequency clamp they apply
+**only on battery**: plugged in means full performance, and a plug or unplug while
+asleep is picked up by the AC poll (`POLL_AC_INTERVAL_SEC`).
+
+| Option | What it does | Measured / expected gain |
+|---|---|---|
+| `SLEEP_WIFI_POWERSAVE=yes` | `iw dev <wlan> set power_save on` on every wireless interface; previous state restored on wake. The link stays up, so SSH keeps working; first-packet latency rises. | none on the CM5 uConsole: brcmfmac already runs with power save on. Kept for hosts where it is off. |
+| `SLEEP_BT_OFF=yes` | rfkill soft-blocks Bluetooth if no device is connected; unblocked at wake only if the service blocked it. | not measurable on the radio rail; idle BT is tiny |
+| `SLEEP_CPU_QUOTA=<pct>` | Runtime `CPUQuota=<pct>%` on every `user-<uid>.slice`; cleared on wake. Processes keep running, capped in aggregate. | ~0.2 W measured at 50% on this uConsole: the CPU rail averaged 0.80 A asleep with the cap against 1.10 A without, with the same background apps |
+
+If you run the blueman applet, it answers any Bluetooth state change it did not
+make itself by setting rfkill through its mechanism, which asks polkit for
+`org.blueman.rfkill.setstate` and pops a password prompt. The package ships
+`/etc/polkit-1/rules.d/50-uconsole-sleep-rfkill.rules`, which allows that action
+for an active local session, so the prompt does not appear. Harmless without
+blueman.
+
+Why these and not more: the BCM2712 kernel has no suspend states at all
+(`/sys/power/state` is empty) and no cpuidle driver, so "sleep" is screen-off with
+the system running. Measured on a CM5 uConsole on battery: ~4.2 W awake idle,
+~3.2 W asleep, of which the CPU is ~0.45 W and the panel plus display pipeline
+(already off) were ~1.0 W. The Pi 5 firmware does not allow `arm_freq_min` below
+1500 MHz, so the `SAVING_CPU_FREQ` clamp is already at its floor. The fan costs
+~0.2 W only while it spins and stops by itself once the CPU cools below its
+hysteresis; a sleep-specific fan curve is not worth it.
+
+
 
 The repo includes a `Makefile` that wraps the build and install steps:
 
@@ -235,6 +264,9 @@ Configuration file: `/etc/uconsole-sleep/config`
 | `KB_SLEEP_LED_WAIT_SEC` | `2` | Wait (seconds) for the keyboard's hidraw node after re-attach before clearing the LED |
 | `KB_SLEEP_USB_SUSPEND` | `no` | Experimental: USB-suspend the detached keyboard while the screen is off (breaks on the uConsole hub, needs a reboot) |
 | `KB_SLEEP_DELAY_SEC` | `1.0` | Grace period (seconds) before keyboard sleep; cancelled if the screen comes back (keeps the keyboard awake across a backlight flash) |
+| `SLEEP_WIFI_POWERSAVE` | `no` | 802.11 power save on all wireless interfaces while asleep; restored on wake |
+| `SLEEP_BT_OFF` | `no` | rfkill-block Bluetooth while asleep if nothing is connected; unblocked at wake |
+| `SLEEP_CPU_QUOTA` | (empty) | Runtime systemd CPUQuota (percent of one CPU) on user slices while asleep; cleared on wake |
 | `DISABLE_CPU_MIN_FREQ` | `no` | Disable setting CPU max frequency to minimum during sleep |
 | `POLL_AC_INTERVAL_SEC` | `30` | AC poll interval (seconds) while screen is off — picks up plug/unplug without waking the screen |
 | `CPU_GOVERNOR_NORMAL` | `schedutil` | Governor used at or above the exit threshold |

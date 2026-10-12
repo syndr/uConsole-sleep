@@ -1,7 +1,7 @@
 VERSION ?= 1.7
 WITH_IDLE_ALERTER ?= 1
 DEB := uconsole-sleep.deb
-APT_DEPS := python3-inotify python3-uinput
+APT_DEPS := python3-inotify python3-uinput iw
 SERVICES := sleep-power-control sleep-remap-powerkey sleep-cpu-governor
 USER_SERVICES :=
 
@@ -10,7 +10,7 @@ APT_DEPS += python3-xlib swayidle sound-theme-freedesktop
 USER_SERVICES += sleep-idle-alert
 endif
 
-SOURCES := $(wildcard src/*.py services/*.service services/user/*.service udev/*.rules) config.default make_uconsole-sleep_package.sh
+SOURCES := $(wildcard src/*.py services/*.service services/user/*.service udev/*.rules polkit/*.rules) config.default make_uconsole-sleep_package.sh
 
 .PHONY: all build deps install uninstall reinstall clean status logs user-status user-logs help
 
