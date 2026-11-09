@@ -1,0 +1,10 @@
+// uconsole-sleep: when SLEEP_BT_OFF rfkill-blocks Bluetooth during sleep, the
+// blueman applet reacts by setting the rfkill state through its own mechanism,
+// which asks polkit for org.blueman.rfkill.setstate and pops a password prompt
+// on the desktop. Let an active, local session do that without a prompt.
+// Harmless when blueman is not installed.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.blueman.rfkill.setstate" && subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+});

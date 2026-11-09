@@ -7,6 +7,7 @@ mkdir -p uconsole-sleep/usr/local/bin
 mkdir -p uconsole-sleep/usr/local/lib/uconsole-sleep
 mkdir -p uconsole-sleep/etc/uconsole-sleep
 mkdir -p uconsole-sleep/etc/systemd/system
+mkdir -p uconsole-sleep/etc/polkit-1/rules.d
 
 if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
     mkdir -p uconsole-sleep/usr/local/lib/systemd/user
@@ -18,6 +19,7 @@ cp "$SCRIPT_DIR/src/find_drm_panel.py"        uconsole-sleep/usr/local/lib/ucons
 cp "$SCRIPT_DIR/src/find_framebuffer.py"      uconsole-sleep/usr/local/lib/uconsole-sleep/find_framebuffer.py
 cp "$SCRIPT_DIR/src/find_internal_kb.py"      uconsole-sleep/usr/local/lib/uconsole-sleep/find_internal_kb.py
 cp "$SCRIPT_DIR/src/kb_hid_led.py"            uconsole-sleep/usr/local/lib/uconsole-sleep/kb_hid_led.py
+cp "$SCRIPT_DIR/src/sleep_knobs.py"           uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_knobs.py
 cp "$SCRIPT_DIR/src/find_power_key.py"        uconsole-sleep/usr/local/lib/uconsole-sleep/find_power_key.py
 cp "$SCRIPT_DIR/src/sleep_display_control.py" uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_display_control.py
 cp "$SCRIPT_DIR/src/sleep_power_control.py"   uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_power_control.py
@@ -55,6 +57,7 @@ EOF
 fi
 
 cp "$SCRIPT_DIR/config.default" uconsole-sleep/etc/uconsole-sleep/config.default
+cp "$SCRIPT_DIR/polkit/50-uconsole-sleep-rfkill.rules" uconsole-sleep/etc/polkit-1/rules.d/50-uconsole-sleep-rfkill.rules
 
 cp "$SCRIPT_DIR/services/sleep-power-control.service"  uconsole-sleep/etc/systemd/system/sleep-power-control.service
 cp "$SCRIPT_DIR/services/sleep-remap-powerkey.service" uconsole-sleep/etc/systemd/system/sleep-remap-powerkey.service
@@ -66,9 +69,9 @@ if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
 fi
 
 if [[ "$WITH_IDLE_ALERTER" == "1" ]]; then
-    DEPS_LINE="python3, python3-inotify, python3-uinput, python3-xlib, swayidle, sound-theme-freedesktop"
+    DEPS_LINE="python3, python3-inotify, python3-uinput, iw, python3-xlib, swayidle, sound-theme-freedesktop"
 else
-    DEPS_LINE="python3, python3-inotify, python3-uinput"
+    DEPS_LINE="python3, python3-inotify, python3-uinput, iw"
 fi
 
 cat << EOF > uconsole-sleep/DEBIAN/control
