@@ -20,6 +20,40 @@
 # default no
 #DISABLE_POWER_OFF_KB=yes
 
+### KB_SLEEP_LED --- [none/numlock/capslock/scrolllock/compose/kana] --- Keyboard sleep signal
+###  - Before the keyboard is detached on sleep, this LED bit is set in its HID LED
+###    output report; it is cleared again after the keyboard is re-attached on wake.
+###    Firmware that understands it (uConsole-tweaks/zmk-uc9900 on the bb9900)
+###    darkens its key backlight and trackpad light and drops to low power while
+###    the bit is set. Other firmware ignores it. "none" disables the signal.
+# default kana
+#KB_SLEEP_LED=none
+
+### KB_SLEEP_LED_WAIT_SEC --- [0.0~] --- How long to wait for the keyboard's hidraw
+###    node to reappear after re-attach before clearing the sleep LED
+# default 2
+#KB_SLEEP_LED_WAIT_SEC=5
+
+### KB_SLEEP_USB_SUSPEND --- [yes/no] --- USB-suspend the detached keyboard on sleep
+###  - After the driver is unbound the USB link is put into selective suspend so
+###    the keyboard MCU can park its USB clock. Resumed before re-attach on wake.
+###    EXPERIMENTAL: on the uConsole's internal hub (Genesys 05e3:0608 behind
+###    dwc2) runtime PM of the bb9900 ends in runtime_status=error, the rebind
+###    fails ("can't set config #1, error -22") and the keyboard stays dead until
+###    a reboot; re-probing the hub wedges both full-speed ports (error -71).
+###    Leave off unless you are testing it.
+###    Ignored when DISABLE_POWER_OFF_KB=yes (that path already autosuspends).
+# default no
+#KB_SLEEP_USB_SUSPEND=yes
+
+### KB_SLEEP_DELAY_SEC --- [0.0~] --- Grace period before the keyboard is put to sleep
+###  - The keyboard sleep (LED, detach, USB suspend) is deferred this long after
+###    the screen goes off; if the screen comes back first, the sleep is cancelled.
+###    Keeps the keyboard awake across sleep-idle-alert's backlight flash instead
+###    of detaching and re-attaching it on every pulse. Wake is always immediate.
+# default 1.0
+#KB_SLEEP_DELAY_SEC=0
+
 ### DISABLE_CPU_MIN_FREQ --- [yes/no] --- Disable set cpu freq max to min
 # default no
 #DISABLE_CPU_MIN_FREQ=yes

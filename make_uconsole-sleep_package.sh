@@ -17,6 +17,7 @@ cp "$SCRIPT_DIR/src/find_backlight.py"        uconsole-sleep/usr/local/lib/ucons
 cp "$SCRIPT_DIR/src/find_drm_panel.py"        uconsole-sleep/usr/local/lib/uconsole-sleep/find_drm_panel.py
 cp "$SCRIPT_DIR/src/find_framebuffer.py"      uconsole-sleep/usr/local/lib/uconsole-sleep/find_framebuffer.py
 cp "$SCRIPT_DIR/src/find_internal_kb.py"      uconsole-sleep/usr/local/lib/uconsole-sleep/find_internal_kb.py
+cp "$SCRIPT_DIR/src/kb_hid_led.py"            uconsole-sleep/usr/local/lib/uconsole-sleep/kb_hid_led.py
 cp "$SCRIPT_DIR/src/find_power_key.py"        uconsole-sleep/usr/local/lib/uconsole-sleep/find_power_key.py
 cp "$SCRIPT_DIR/src/sleep_display_control.py" uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_display_control.py
 cp "$SCRIPT_DIR/src/sleep_power_control.py"   uconsole-sleep/usr/local/lib/uconsole-sleep/sleep_power_control.py

@@ -1,4 +1,4 @@
-# uConsole-sleep v1.6
+# uConsole-sleep v1.7
 ### Sleep Service Package for uConsole
 
 This service is built for **Debian** and implemented in **Python**. It is primarily developed against the community "Rex" Debian image for the uConsole, and should also work on other Debian-based distributions (including Ubuntu).
@@ -9,8 +9,8 @@ Initially, power key events were detected using a polling loop, but this was lat
 When the screen turns off for any reason (e.g., screensaver activation, desktop lock, or system sleep), the service detects the screen-off state and applies several power-saving measures:
 
 - Sets the CPU maximum frequency to the minimum (skipped when on AC power)
-- Disables power to the built-in keyboard
-- Disables the keyboard wakeup trigger
+- Detaches the built-in keyboard
+- Tells the keyboard firmware the host is asleep (see [Keyboard sleep signal](#keyboard-sleep-signal))
 
 While the screen is off, AC plug state is polled every 30 seconds so the freq clamp catches up to plug/unplug without needing to wake the screen.
 
@@ -66,6 +66,53 @@ with `lsusb` and add it to that list, then rebuild and reinstall (`make
 reinstall`). `sleep-power-control` exits at startup if it can't find a matching
 keyboard, so an unrecognized keyboard must be added here before the service
 will run.
+
+## Keyboard sleep signal
+
+Detaching the keyboard's USB driver stops input, but the keyboard's own
+microcontroller keeps running: on the ZMK `bb9900` that meant the trackpad light
+stayed lit and a keypress during sleep still woke the key backlight. So on sleep
+`sleep-power-control` now:
+
+1. sets one bit in the keyboard's standard HID **LED output report** (the one the
+   host uses for Num/Caps/Scroll Lock). The default is the **Kana** indicator,
+   which nothing on a Linux host ever drives, so it is free to mean "host asleep";
+2. unbinds the USB driver as before;
+3. optionally (`KB_SLEEP_USB_SUSPEND=yes`) puts the USB link into selective
+   suspend, so the keyboard can park its USB clock. **Off by default:** on the
+   uConsole's internal hub (Genesys `05e3:0608` behind `dwc2`) runtime PM of the
+   bb9900 ends in `runtime_status=error`, the rebind fails with "can't set
+   config #1, error -22", and the keyboard stays dead until a reboot. Do not try
+   to recover by re-probing the hub: that wedges both full-speed ports (keyboard
+   and fingerprint reader) with "device descriptor read/64, error -71".
+
+On wake it rebinds the driver, waits for the keyboard's `hidraw` node and clears
+the bit. The report layout (report ID and bit position) is read
+from the keyboard's HID report descriptor, so any keyboard that exposes the LED
+works; keyboards without it just log a note once.
+
+The firmware has to act on the bit. The `zmk-uc9900` firmware in
+[uConsole-tweaks](https://github.com/syndr/uConsole-tweaks) treats it as "host
+asleep": both lights off, no reports, trackpad sensor parked. Stock firmware
+ignores it, in which case the signal is harmless.
+
+Keyboard sleep is deferred by `KB_SLEEP_DELAY_SEC` (1 s) after the screen goes
+off, and cancelled if the screen comes back first. That keeps the keyboard awake
+across `sleep-idle-alert`'s backlight flash (whose pulses toggle `bl_power` with
+0.25 s gaps) instead of detaching and re-attaching it on every pulse: the
+keyboard wakes once at the start of a flash and goes back to sleep a second
+after it ends.
+
+Manual test (root), useful when working on the firmware:
+
+```bash
+python3 /usr/local/lib/uconsole-sleep/kb_hid_led.py status kana   # show report id / bit
+python3 /usr/local/lib/uconsole-sleep/kb_hid_led.py on kana       # keyboard -> asleep
+python3 /usr/local/lib/uconsole-sleep/kb_hid_led.py off kana      # keyboard -> awake
+```
+
+Config: `KB_SLEEP_LED`, `KB_SLEEP_LED_WAIT_SEC`, `KB_SLEEP_USB_SUSPEND`,
+`KB_SLEEP_DELAY_SEC` (see [Configuration](#configuration)).
 
 ## How to package and install
 
@@ -184,6 +231,10 @@ Configuration file: `/etc/uconsole-sleep/config`
 | `SAVING_CPU_FREQ` | `100,100` | CPU frequency (MHz) `<min,max>` applied during power saving |
 | `DISABLE_POWER_OFF_DRM` | `no` | Disable turning off DRM on sleep (set `yes` if screen recovery has issues) |
 | `DISABLE_POWER_OFF_KB` | `no` | Disable turning off keyboard on sleep (set `yes` to allow keyboard to control its backlight) |
+| `KB_SLEEP_LED` | `kana` | HID LED bit set on the keyboard while the host sleeps (`none` disables); see [Keyboard sleep signal](#keyboard-sleep-signal) |
+| `KB_SLEEP_LED_WAIT_SEC` | `2` | Wait (seconds) for the keyboard's hidraw node after re-attach before clearing the LED |
+| `KB_SLEEP_USB_SUSPEND` | `no` | Experimental: USB-suspend the detached keyboard while the screen is off (breaks on the uConsole hub, needs a reboot) |
+| `KB_SLEEP_DELAY_SEC` | `1.0` | Grace period (seconds) before keyboard sleep; cancelled if the screen comes back (keeps the keyboard awake across a backlight flash) |
 | `DISABLE_CPU_MIN_FREQ` | `no` | Disable setting CPU max frequency to minimum during sleep |
 | `POLL_AC_INTERVAL_SEC` | `30` | AC poll interval (seconds) while screen is off — picks up plug/unplug without waking the screen |
 | `CPU_GOVERNOR_NORMAL` | `schedutil` | Governor used at or above the exit threshold |
