@@ -116,9 +116,15 @@
 # default 30
 #POLL_AC_INTERVAL_SEC=60
 
-### CPU_GOVERNOR_NORMAL --- governor name --- Used on AC or above hysteresis
+### CPU_GOVERNOR_NORMAL --- governor name --- Used on AC (see CPU_GOVERNOR_AC_NORMAL)
+###    and at or above the exit threshold
 # default schedutil
 #CPU_GOVERNOR_NORMAL=ondemand
+
+### CPU_GOVERNOR_AC_NORMAL --- [yes/no] --- Use the normal governor whenever on AC
+###  - "no" decides from the battery percentage alone, plugged in or not.
+# default yes
+#CPU_GOVERNOR_AC_NORMAL=no
 
 ### CPU_GOVERNOR_LOW_BATTERY --- governor name --- Used below low-battery threshold
 # default powersave
@@ -135,6 +141,22 @@
 ### CPU_GOVERNOR_POLL_SEC --- [1~] --- Battery/AC poll interval in seconds
 # default 30
 #CPU_GOVERNOR_POLL_SEC=60
+
+### CPU_BATTERY_PCT_CMD --- command --- Where the governor gets the battery percentage
+###  - Empty reads the kernel gauge (/sys/class/power_supply/axp20x-battery/capacity).
+###    Set it to a command that prints an integer 0-100 to use a better gauge, e.g.
+###    uConsole-tweaks' stuck-aware one. Run without a shell, 5 s timeout; on
+###    failure the kernel gauge is used.
+# default empty
+#CPU_BATTERY_PCT_CMD=/usr/local/bin/uconsole-battery --percent
+
+### CPU_PROFILE_GROUP --- group name --- Who may select a CPU profile
+###  - Profiles are selected by writing /run/uconsole-sleep/cpu-profile
+###    (sleep_cpu_governor --set <auto|governor>). Empty makes that file
+###    world-writable: ANY local user can switch the governor. Set a group to
+###    restrict it to that group's members (and root).
+# default empty
+#CPU_PROFILE_GROUP=users
 
 ###########################################################################
 # sleep-idle-alert (user service)

@@ -1,4 +1,4 @@
-VERSION ?= 1.7
+VERSION ?= 1.8
 WITH_IDLE_ALERTER ?= 1
 DEB := uconsole-sleep.deb
 APT_DEPS := python3-inotify python3-uinput iw
@@ -63,5 +63,5 @@ help:
 	@echo "  user-status  systemctl --user status for user services"
 	@echo "  user-logs    journalctl --user -f for user services"
 	@echo ""
-	@echo "Override version: make VERSION=1.7 build"
+	@echo "Override version: make VERSION=1.8 build"
 	@echo "Skip the idle alerter: make WITH_IDLE_ALERTER=0 build"
