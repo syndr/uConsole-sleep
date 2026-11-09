@@ -1,4 +1,4 @@
-# uConsole-sleep v1.7
+# uConsole-sleep v1.8
 ### Sleep Service Package for uConsole
 
 This service is built for **Debian** and implemented in **Python**. It is primarily developed against the community "Rex" Debian image for the uConsole, and should also work on other Debian-based distributions (including Ubuntu).
@@ -14,7 +14,7 @@ When the screen turns off for any reason (e.g., screensaver activation, desktop 
 
 While the screen is off, AC plug state is polled every 30 seconds so the freq clamp catches up to plug/unplug without needing to wake the screen.
 
-I also experimented with switching the CPU governor to `powersave`, but observed a slight delay during state transitions, so the screen-driven path adjusts the maximum CPU frequency instead. A separate `sleep-cpu-governor` service handles governor switching on slower battery-state events (where the transition delay is acceptable): it drops to `powersave` below 20% battery and restores `schedutil` at or above 25%, with hysteresis to prevent flapping.
+I also experimented with switching the CPU governor to `powersave`, but observed a slight delay during state transitions, so the screen-driven path adjusts the maximum CPU frequency instead. A separate `sleep-cpu-governor` service handles governor switching on slower battery-state events (where the transition delay is acceptable): on battery it drops to `powersave` below 20% and restores `schedutil` at or above 25%, with hysteresis to prevent flapping; on AC it stays on `schedutil`. A profile can also be selected by hand for the current boot.
 
 Similarly, screen-off detection was originally implemented using a polling loop, but it was replaced with **inotify** to further reduce CPU load.
 
@@ -35,7 +35,35 @@ Handles power-saving behavior based on the current screen state. Skips the CPU f
 ### sleep-cpu-governor
 `/usr/local/bin/sleep_cpu_governor`
 
-Switches the cpufreq governor based on battery capacity. Polls every 30 seconds; uses hysteresis (drop at <20%, restore at ≥25%) to avoid flapping. Touches only `scaling_governor`, so it does not conflict with sleep-power-control's `scaling_min_freq` / `scaling_max_freq` writes.
+Keeps the cpufreq governor (`scaling_governor`) at either an automatic choice or a profile selected by hand. Touches only `scaling_governor`, so it does not conflict with sleep-power-control's `scaling_min_freq` / `scaling_max_freq` writes.
+
+**Automatic** (the default after every boot):
+
+- On AC the normal governor (`schedutil`) is used whatever the battery percentage (`CPU_GOVERNOR_AC_NORMAL`). "On AC" means a mains/USB supply reports online, or the battery reports `Charging` / `Full`.
+- On battery it drops to the low-battery governor (`powersave`) below 20% and returns to normal at or above 25%. In between it keeps `powersave` only if it was already there. Unplugging starts from the percentage alone.
+- The percentage is the kernel gauge by default. `CPU_BATTERY_PCT_CMD` substitutes a command that prints a percentage, e.g. uConsole-tweaks' stuck-aware `uconsole-battery --percent`. The daemon runs it as root, so that script keeps its state under `/tmp` and root's `~/.local/state`, separate from your user's copy; its stuck detection still applies.
+
+**Profiles.** Select one with the same command the service runs:
+
+```
+sleep_cpu_governor --set performance   # or any name in scaling_available_governors
+sleep_cpu_governor --set auto          # back to the automatic rules
+sleep_cpu_governor --get --text        # e.g. "powersave (automatic: low battery, 18%)"
+sleep_cpu_governor --get               # the full state as JSON
+```
+
+A selection applies within about 2 seconds and is a **current-boot setting**: it survives a service restart, screen sleep and plug/unplug, and is gone after a reboot. Nothing is written to disk.
+
+Two files in `/run/uconsole-sleep/` carry this:
+
+| File | Mode | Content |
+|---|---|---|
+| `cpu-profile` | `0666` | The request: `auto` or a governor name. `--set` writes it; so can any script (`echo performance > /run/uconsole-sleep/cpu-profile`). Invalid content is logged and reset to `auto`. |
+| `cpu-governor.state` | `0644` | JSON written by the daemon on every poll and change: `governor`, `mode` (`auto`/`manual`), `reason` (`ac`, `low-battery`, `hold`, `normal`, `manual`), `requested`, `capacity`, `ac_online`, `available`, `normal`, `low_battery`, `enter_pct`, `exit_pct`, `ts`. Present only while the daemon runs. |
+
+`cpu-profile` is world-writable by default, so **any local user can switch the governor**; that suits a single-user handheld. Set `CPU_PROFILE_GROUP` to restrict it to one group.
+
+The daemon is authoritative: every poll (30 s) it reads the real governor and puts back the one it wants, so a direct write to `scaling_governor` by another script lasts at most one poll. Scripts that want a different governor should write `cpu-profile` instead. When the service stops it restores the governor it found at start and leaves `cpu-profile` in place.
 
 ### sleep_display_control
 `/usr/local/lib/uconsole-sleep/sleep_display_control.py` (shared library used by sleep-power-control and sleep-remap-powerkey)
@@ -191,7 +219,7 @@ make help        # list targets
 The version baked into the package can be overridden:
 
 ```
-make VERSION=1.7 build
+make VERSION=1.8 build
 ```
 
 The idle alerter is optional at build time. To produce a slimmer package
@@ -295,11 +323,14 @@ Configuration file: `/etc/uconsole-sleep/config`
 | `SLEEP_CPU_QUOTA` | (empty) | Runtime systemd CPUQuota (percent of one CPU) on user slices while asleep; cleared on wake |
 | `DISABLE_CPU_MIN_FREQ` | `no` | Disable setting CPU max frequency to minimum during sleep |
 | `POLL_AC_INTERVAL_SEC` | `30` | AC poll interval (seconds) while screen is off — picks up plug/unplug without waking the screen |
-| `CPU_GOVERNOR_NORMAL` | `schedutil` | Governor used at or above the exit threshold |
+| `CPU_GOVERNOR_NORMAL` | `schedutil` | Governor used on AC and at or above the exit threshold |
+| `CPU_GOVERNOR_AC_NORMAL` | `yes` | Use the normal governor whenever on AC; `no` decides from the percentage alone |
 | `CPU_GOVERNOR_LOW_BATTERY` | `powersave` | Governor used below the enter threshold |
 | `CPU_LOW_BATTERY_ENTER_PCT` | `20` | Drop to low-battery governor below this % |
 | `CPU_LOW_BATTERY_EXIT_PCT` | `25` | Restore normal governor at or above this % (must be ≥ ENTER) |
-| `CPU_GOVERNOR_POLL_SEC` | `30` | Battery poll interval (seconds) for the governor service |
+| `CPU_GOVERNOR_POLL_SEC` | `30` | Battery/AC poll interval (seconds) for the governor service |
+| `CPU_BATTERY_PCT_CMD` | (empty) | Command printing the battery percentage for the governor service; empty reads the kernel gauge |
+| `CPU_PROFILE_GROUP` | (empty) | Group allowed to select a CPU profile; empty lets any local user |
 | `IDLE_INITIAL_DELAY` | `900` | Seconds of accumulated idle-on-battery before the first (gentle) squawk |
 | `IDLE_INTERVAL` | `600` | Seconds between gentle and nag |
 | `IDLE_INTERVAL_DUMBASS` | `120` | Seconds between dumbass-tier squawks |

@@ -1,3 +1,27 @@
+Ver1.8
+  - sleep-cpu-governor: on AC the normal governor is used whatever the battery
+    percentage (CPU_GOVERNOR_AC_NORMAL, default yes). Before, plugging in below the
+    low-battery threshold left the governor at powersave until the gauge reached the
+    exit threshold
+  - sleep-cpu-governor: CPU profiles. `sleep_cpu_governor --set <auto|governor>`
+    selects a governor for the current boot, `--get [--text]` shows what the daemon is
+    doing and why. The request is /run/uconsole-sleep/cpu-profile (world-writable
+    unless CPU_PROFILE_GROUP is set), the daemon's state is
+    /run/uconsole-sleep/cpu-governor.state (JSON). A selection survives a service
+    restart and is gone after a reboot
+  - sleep-cpu-governor: the real governor is re-read every poll and corrected, so the
+    daemon is authoritative; a selection applies within ~2s
+  - sleep-cpu-governor: the hysteresis band keeps powersave only when the daemon was
+    already holding it; otherwise 20-24% is normal (it used to keep whatever governor
+    happened to be set)
+  - sleep-cpu-governor: optional CPU_BATTERY_PCT_CMD supplies the battery percentage
+    (e.g. a stuck-aware gauge); falls back to the kernel gauge
+  - sleep-cpu-governor: the original governor is now really restored on
+    `systemctl stop` (SIGTERM was not handled, so the restore never ran)
+  - tests/test_governor_decide.py: unit tests for the decision logic
+    (python3 -m unittest discover tests)
+  - Makefile: VERSION 1.8
+
 Ver1.7
   - sleep-power-control: keyboard sleep signal. Before detaching the keyboard the
     service sets one bit (default: Kana) in the keyboard's HID LED output report and

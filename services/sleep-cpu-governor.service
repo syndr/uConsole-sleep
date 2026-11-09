@@ -5,6 +5,9 @@ After=basic.target
 [Service]
 EnvironmentFile=/etc/uconsole-sleep/config
 ExecStart=/usr/local/bin/sleep_cpu_governor
+# /run/uconsole-sleep holds the profile selection; it must outlive a restart.
+RuntimeDirectory=uconsole-sleep
+RuntimeDirectoryPreserve=yes
 Restart=always
 User=root
 Group=root
