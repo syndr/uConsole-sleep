@@ -1,11 +1,33 @@
 import os
+import time
 import uinput
 from find_drm_panel import find_drm_panel
 from find_framebuffer import find_framebuffer
 from find_backlight import find_backlight
+import user_session
 
 
 DISABLE_POWER_OFF_DRM = os.environ.get("DISABLE_POWER_OFF_DRM") == "yes"
+# Ask the compositor to DPMS the output off/on around the sysfs writes. Without
+# this a Wayland compositor keeps scanning out to the dark panel: measured on a
+# CM5 uConsole under Hyprland as ~0.7 W more than its own DPMS-off path.
+POWERKEY_DPMS_OFF_CMD = (os.environ.get("POWERKEY_DPMS_OFF_CMD") or "").strip()
+POWERKEY_DPMS_ON_CMD = (os.environ.get("POWERKEY_DPMS_ON_CMD") or "").strip()
+POWERKEY_DPMS_SETTLE_SEC = float(os.environ.get("POWERKEY_DPMS_SETTLE_SEC") or 0.3)
+
+
+def run_dpms(cmd, what):
+    if not cmd:
+        return
+    rc, out, user = user_session.run_in_session(cmd)
+    if rc is None:
+        print(f"dpms {what}: skipped, {out}")
+    elif rc != 0:
+        print(f"dpms {what}: '{cmd}' as {user} failed rc={rc}: {out}")
+    else:
+        print(f"dpms {what}: '{cmd}' as {user} ok")
+        if POWERKEY_DPMS_SETTLE_SEC > 0:
+            time.sleep(POWERKEY_DPMS_SETTLE_SEC)
 
 drm_panel_path = find_drm_panel()
 framebuffer_path = find_framebuffer()
@@ -49,9 +71,12 @@ def toggle_display():
             if not DISABLE_POWER_OFF_DRM:
                 with open(os.path.join(drm_panel_path, "status"), "w") as f:
                     f.write("detect")
+            run_dpms(POWERKEY_DPMS_ON_CMD, "on")
             uinput_device.emit_click(uinput.KEY_WAKEUP)
         else:
-            # off
+            # off: let the compositor release the output first, then the
+            # sysfs writes below make sure the panel really goes dark.
+            run_dpms(POWERKEY_DPMS_OFF_CMD, "off")
             if not DISABLE_POWER_OFF_DRM:
                 with open(os.path.join(drm_panel_path, "status"), "w") as f:
                     f.write("off")
